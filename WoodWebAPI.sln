@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34322.80
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WoodWebAPI", "WoodWebAPI\WoodWebAPI.csproj", "{B083819F-7FCE-407E-ACDD-172B95177888}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TelegramBotWood", "TelegramBotWood\TelegramBotWood.csproj", "{0CF0EF5B-293B-4D8A-9ECF-1BCB594BD95A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решения", "Элементы решения", "{CA30B5E9-EB9E-4771-8049-E32651D64A8C}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B083819F-7FCE-407E-ACDD-172B95177888}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B083819F-7FCE-407E-ACDD-172B95177888}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B083819F-7FCE-407E-ACDD-172B95177888}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B083819F-7FCE-407E-ACDD-172B95177888}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0CF0EF5B-293B-4D8A-9ECF-1BCB594BD95A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0CF0EF5B-293B-4D8A-9ECF-1BCB594BD95A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0CF0EF5B-293B-4D8A-9ECF-1BCB594BD95A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0CF0EF5B-293B-4D8A-9ECF-1BCB594BD95A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1C4D6CA9-9B47-42D1-8997-0D63759E2845}
+	EndGlobalSection
+EndGlobal
