@@ -1,8 +1,6 @@
-
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
@@ -20,7 +18,7 @@ namespace WoodWebAPI
             var builder = WebApplication.CreateBuilder(args);
             var configuration = builder
                 .Configuration
-                .AddJsonFile("appsettings.local.json",false)
+                .AddJsonFile("appsettings.local.json", false)
                 .Build();
 
             // Add services to the container.
@@ -55,7 +53,9 @@ namespace WoodWebAPI
                 };
             });
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                            .AddNewtonsoftJson();
+
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
 
@@ -75,16 +75,16 @@ namespace WoodWebAPI
                     In = ParameterLocation.Header,
                     Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer 1safsfsdfdfd\"",
                 });
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement 
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {
                     {
                          new OpenApiSecurityScheme
                          {
-                            Reference = new OpenApiReference 
+                            Reference = new OpenApiReference
                             {
                                 Type = ReferenceType.SecurityScheme,
                                 Id = "Bearer"
-                            }           
+                            }
                          },
                         new string[] {}
                     }
@@ -94,13 +94,14 @@ namespace WoodWebAPI
             builder.Services.AddDbContext<WoodDBContext>(options => options.UseSqlServer(configuration.GetConnectionString("ConnStrWood")));
             builder.Services.AddScoped<ICustomerManage, CustomerManageService>();
             builder.Services.AddScoped<IOrderManage, OrderManageService>();
-            builder.Services.AddScoped<ITimberManage,TimberManageService>();
+            builder.Services.AddScoped<ITimberManage, TimberManageService>();
 
-            // Adding Background service worker to work wict Telegram
+            // Adding Background service worker to work with Telegram
             builder.Services.AddHostedService(options => new TelegramWorker(
                 options.GetRequiredService<ILogger<TelegramWorker>>(),
-                configuration.GetValue<string>("TelegramToken") ?? throw new ArgumentNullException("TelegramToken", "This field must be specified")
-                )) ;
+                configuration.GetValue<string>("TelegramToken") ?? throw new ArgumentNullException("TelegramToken", "This field must be specified"),
+                configuration.GetSection("ngrok").GetValue<string>("URL") ?? throw new ArgumentNullException("NGROK URL","URL must be specified")
+                ));
 
             var app = builder.Build();
 

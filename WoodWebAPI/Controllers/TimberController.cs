@@ -28,7 +28,7 @@ namespace WoodWebAPI.Controllers
                 return data;
             }
 
-            return null;
+            return new GetTimber();
         }
 
         [HttpPost]
@@ -41,7 +41,7 @@ namespace WoodWebAPI.Controllers
                 return data;
             }
 
-            return null;
+            return new ExecResultModel();
         }
 
         [HttpPost]
@@ -54,7 +54,7 @@ namespace WoodWebAPI.Controllers
                 return data;
             }
 
-            return null;
+            return new ExecResultModel();
         }
 
         [HttpPost]
