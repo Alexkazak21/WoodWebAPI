@@ -26,7 +26,7 @@ namespace WoodWebAPI.Controllers
 
             if (result == null)
             {
-                return BadRequest("Customers list is empty"); //BadRequest(result.Message);
+                return BadRequest("Customers list is empty"); 
             }
 
             return Ok(result);
@@ -39,7 +39,7 @@ namespace WoodWebAPI.Controllers
 
             if (result == null)
             {
-                return BadRequest("Customers list is empty"); //BadRequest(result.Message);
+                return BadRequest("Customers list is empty"); 
             }
 
             return Ok(result);
@@ -52,10 +52,10 @@ namespace WoodWebAPI.Controllers
 
             if (!result.Success)
             {
-                return Ok(result.Message); //BadRequest(result.Message);
+                return BadRequest(result.Message); 
             }
 
-            return BadRequest(result);
+            return Ok(result);
         }
 
         [Authorize(Roles = UserRoles.Admin)]

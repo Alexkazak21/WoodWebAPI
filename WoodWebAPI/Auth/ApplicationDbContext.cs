@@ -8,8 +8,7 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     { 
-        //Database.EnsureDeletedAsync();
-        //Database.EnsureCreatedAsync();
+
     }
     protected override void OnModelCreating(ModelBuilder builder)
     {

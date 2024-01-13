@@ -9,5 +9,5 @@ public interface ICommand
 
     public string Name { get; }
 
-    public async Task Execute(Update update, CancellationToken cancellationToken) { }
+    public Task Execute(Update update,CancellationToken cancellationToken);
 }
