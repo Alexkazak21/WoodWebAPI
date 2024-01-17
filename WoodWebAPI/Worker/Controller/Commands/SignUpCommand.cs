@@ -3,6 +3,7 @@ using Telegram.Bot.Types;
 using Newtonsoft.Json;
 using WoodWebAPI.Data.Models.Customer;
 using WoodWebAPI.Auth;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace WoodWebAPI.Worker.Controller.Commands
 {
@@ -49,7 +50,27 @@ namespace WoodWebAPI.Worker.Controller.Commands
 
                     if (resultCustomer.IsSuccessStatusCode) //&& resultUser.IsSuccessStatusCode)
                     {
-                        await Client.SendTextMessageAsync(chatId, "Поздравляем с регистарцией!");
+
+                        WebAppInfo webAppInfo = new WebAppInfo();
+
+                        webAppInfo.Url = "https://woodcutters.mydurable.com/";
+                        var inlineMarkup = new InlineKeyboardMarkup(new[] 
+                        { 
+                            InlineKeyboardButton.WithWebApp(
+                                text: "Продолжить в приложении",
+                                webAppInfo),
+
+                            InlineKeyboardButton.WithCallbackData(
+                                text: "Продолжить в боте",
+                                callbackData: "/login")                              
+                        });
+                        
+                        await Client.SendTextMessageAsync(
+                            chatId: chatId, 
+                            text: "Поздравляем с регистарцией!"
+                            +"\nПосле регистрации Вам необходимо войти", 
+                            replyMarkup: inlineMarkup);
+            
                     }
                     else
                     {
@@ -59,54 +80,53 @@ namespace WoodWebAPI.Worker.Controller.Commands
             }
         }
 
-        public SignUpCommand(CommandExecutor executor)
-        {
-            Executor = executor;
-        }
+        //public SignUpCommand(CommandExecutor executor)
+        //{
+        //    Executor = executor;
+        //}
 
-        public async Task GetUpdate(Update update,CancellationToken cancellationToken)
-        {
-            long chatId = update.Message.Chat.Id;
-            if (update.Message.Text == null) //Проверочка
-                return;
+        //public async Task GetUpdate(Update update,CancellationToken cancellationToken)
+        //{
+        //    long chatId = update.Message.Chat.Id;
+        //    if (update.Message.Text == null) //Проверочка
+        //        return;
 
-            if (_password == null) //Получаем пароль пользователя
-            {
-                _password = update.Message.Text;
+        //    if (_password == null) //Получаем пароль пользователя
+        //    {
+        //        _password = update.Message.Text;
 
-                using (HttpClient httpClient = new HttpClient())
-                {
-                    CreateCustomerDTO customerDTO = new CreateCustomerDTO()
-                    {
-                        Name = new string((update.CallbackQuery.From.FirstName ?? "anonymous") + (" " + update.CallbackQuery.From.LastName ?? $" {Guid.NewGuid()}")),
-                        TelegtamId = chatId.ToString(),
-                    };
+        //        using (HttpClient httpClient = new HttpClient())
+        //        {
+        //            CreateCustomerDTO customerDTO = new CreateCustomerDTO()
+        //            {
+        //                Name = new string((update.CallbackQuery.From.FirstName ?? "anonymous") + (" " + update.CallbackQuery.From.LastName ?? $" {Guid.NewGuid()}")),
+        //                TelegtamId = chatId.ToString(),
+        //            };
 
-                    var contentCustomer = JsonContent.Create(customerDTO);
+        //            var contentCustomer = JsonContent.Create(customerDTO);
 
-                    RegisterModel registerModel = new RegisterModel()
-                    {
-                        TelegramID = chatId.ToString(),
-                        Password = _password,
-                    };
+        //            RegisterModel registerModel = new RegisterModel()
+        //            {
+        //                TelegramID = chatId.ToString(),
+        //                Password = _password,
+        //            };
 
-                    var contentUser = JsonContent.Create(registerModel);
+        //            var contentUser = JsonContent.Create(registerModel);
 
-                    var resultCustomer = await httpClient.PostAsJsonAsync("http://localhost:5550/api/Customer/CreateCustomers", contentCustomer);
-                    var resultUser = await httpClient.PostAsJsonAsync("http://localhost:5550/api/Authenticate/register", contentUser);
+        //            var resultCustomer = await httpClient.PostAsJsonAsync("http://localhost:5550/api/Customer/CreateCustomers", contentCustomer);
+        //            var resultUser = await httpClient.PostAsJsonAsync("http://localhost:5550/api/Authenticate/register", contentUser);
 
-                    if (resultCustomer.IsSuccessStatusCode && resultUser.IsSuccessStatusCode)
-                    {
-                        await Client.SendTextMessageAsync(chatId, "Поздравляем с регистарцией!");
-                    }
-                    else
-                    {
-                        await Client.SendTextMessageAsync(chatId, "ОШИБКА В РЕГИСТРАЦИИ");
-                    }
+        //            if (resultCustomer.IsSuccessStatusCode && resultUser.IsSuccessStatusCode)
+        //            {
+        //                await Client.SendTextMessageAsync(chatId, "Поздравляем с регистарцией!");
+        //            }
+        //            else
+        //            {
+        //                await Client.SendTextMessageAsync(chatId, "ОШИБКА В РЕГИСТРАЦИИ");
+        //            }
 
-                }
-                Executor.StopListen();
-            }
-        }
+        //        }
+        //    }
+        //}
     }
 }

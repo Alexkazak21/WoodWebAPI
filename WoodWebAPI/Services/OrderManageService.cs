@@ -93,7 +93,6 @@ namespace WoodWebAPI.Services
         }
         public async Task<ExecResultModel> DeleteAsync(DeleteOrderDTO model)
         {
-
             if (model != null)
             {
                 var customer = await _db.Customers.Where(x => x.TelegramID == model.CustomerTelegramId).FirstOrDefaultAsync();
@@ -180,9 +179,9 @@ namespace WoodWebAPI.Services
             var customer = await _db.Customers.Where(x => x.TelegramID == model.Customer_TelegramID).FirstOrDefaultAsync();
             if (customer != null)
             {
-                var data = await _db.Orders.Where(x => x.CustomerId == customer.CustomerId).Include(x => x.Timbers).ToArrayAsync();
+                var data = await _db.Orders.Where(x => x.CustomerId == customer.CustomerId && x.IsCompleted == false).Include(x => x.Timbers).ToArrayAsync();
 
-                List<OrderModel> result = new List<OrderModel>();
+                List<OrderModel> result = [];
                 if (data != null)
                 {
                     foreach (var order in data)
@@ -198,8 +197,7 @@ namespace WoodWebAPI.Services
                                 CompletedAt = order.CompletedAt,
                                 IsVerified = order.IsVerified,
                                 Timbers = order.Timbers,
-                            }
-                            );
+                            });
                     }
 
                     return result.ToArray();
