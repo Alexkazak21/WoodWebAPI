@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Threading;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -40,85 +41,77 @@ public class MainCommand : ICommand
 
                 if (userExist && chatid != -1)
                 {
-                    using (HttpClient httpClient = new HttpClient())
+                    var orders = await CheckOrders(chatid, cancellationToken);
+
+                    if (orders != null)
                     {
-                        var content = JsonContent.Create(
-                            new GetOrdersDTO()
-                            {
-                                Customer_TelegramID = chatid.ToString(),
-                            });
-
-                        var responce = await httpClient.PostAsync("http://localhost:5550/api/Order/GetOrdersOfCustomer", content, cancellationToken);
-                        var responseJsonContent = await responce.Content.ReadAsStringAsync(cancellationToken);
-                        OrderModel[]? orders = JsonConvert.DeserializeObject<OrderModel[]?>(responseJsonContent);
-
-                        if (orders != null)
+                        if (orders.Length == 0)
                         {
-                            if (orders.Length == 0)
-                            {
-                                await Client.SendTextMessageAsync(
-                                    chatId: chatid,
-                                    text: "У вас пока нет заказов. \nХотите создать заказ?",
-                                    replyMarkup: new InlineKeyboardMarkup(
-                                                    new[]
-                                                    {
+                            await Client.SendTextMessageAsync(
+                                chatId: chatid,
+                                text: "У вас пока нет заказов. \nХотите создать заказ?",
+                                replyMarkup: new InlineKeyboardMarkup(
+                                                new[]
+                                                {
                                                     InlineKeyboardButton.WithCallbackData("Создать заказ","/new_order"),
-                                                    }),
-                                    cancellationToken: cancellationToken);
-                            }
-                            else if (orders.Length > 5)
+                                                }),
+                                cancellationToken: cancellationToken);
+                        }
+                        else if (orders.Length > 5)
+                        {
+                            await Client.SendTextMessageAsync(
+                                chatId: chatid,
+                                text: "Максимальное колличество одновременных заказов 4",
+                                cancellationToken: cancellationToken);
+                        }
+                        else if (orders != null && orders.Length < 5)
+                        {
+                            var keybordButtons = new List<InlineKeyboardButton>();
+                            for (int i = 0; i < orders.Length; i++)
                             {
-                                await Client.SendTextMessageAsync(
-                                    chatId: chatid,
-                                    text: "Максимальное колличество одновременных заказов 4",
-                                    cancellationToken: cancellationToken);
+                                keybordButtons.Add(
+                                    InlineKeyboardButton.WithCallbackData($"{orders[i].OrderId}", $"/show_order:{orders[i].Id}"));
+
                             }
-                            else if (orders != null && orders.Length < 5)
+
+                            InlineKeyboardMarkup? keyboard = null;
+                            if (orders.Length < 4)
                             {
-                                var keybordButtons = new List<InlineKeyboardButton>();
-                                for (int i = 0; i < orders.Length; i++)
+                                keyboard = new InlineKeyboardMarkup(new[]
                                 {
-                                    keybordButtons.Add(
-                                        InlineKeyboardButton.WithCallbackData($"{orders[i].OrderId}", $"order:{orders[i].Id}"));
-
-                                }
-
-                                InlineKeyboardMarkup? keyboard = null;
-                                if (orders.Length < 4)
-                                {
-                                    keyboard = new InlineKeyboardMarkup(new[]
-                                    {
                                         keybordButtons.ToArray<InlineKeyboardButton>(),
                                         [
                                             InlineKeyboardButton.WithCallbackData("Добавить заказ", "/new_order"),
-                                        ]
+                                            ],
+                                        [
+                                            InlineKeyboardButton.WithCallbackData("Удалить заказ", "/delete_order"),
+                                            ]
                                     });
-                                }
-                                else 
+                            }
+                            else
+                            {
+                                keyboard = new InlineKeyboardMarkup(new[]
                                 {
-                                    keyboard = new InlineKeyboardMarkup(new[]
-                                    {
                                         keybordButtons.ToArray<InlineKeyboardButton>(),
                                         [
-                                            InlineKeyboardButton.WithCallbackData("Удалить заказ", "/remove_order"),
+                                            InlineKeyboardButton.WithCallbackData("Удалить заказ", "/delete_order"),
                                         ]
-                                    });                                   
-                                }
-
-                                
-
-                                await Client.SendTextMessageAsync(
-                                    chatId: chatid,
-                                    text: "Выберите заказ",
-                                    replyMarkup: keyboard,
-                                    cancellationToken: cancellationToken);
+                                    });
                             }
+
+
+
+                            await Client.SendTextMessageAsync(
+                                chatId: chatid,
+                                text: "Выберите заказ",
+                                replyMarkup: keyboard,
+                                cancellationToken: cancellationToken);
                         }
-                        else
-                        {
-                            TelegramWorker.Logger.LogError(
-                                $"MainCommand \tНе существует объект {nameof(orders)}", cancellationToken);
-                        }
+                    }
+                    else
+                    {
+                        TelegramWorker.Logger.LogError(
+                            $"MainCommand \tНе существует объект {nameof(orders)}", cancellationToken);
                     }
                 }
                 else
@@ -136,6 +129,21 @@ public class MainCommand : ICommand
                         cancellationToken: cancellationToken);
                 }
             }
+        }
+    }
+    public async Task<OrderModel[]?> CheckOrders(long chatid,CancellationToken cancellationToken)
+    {
+        using (HttpClient httpClient = new HttpClient())
+        {
+            var content = JsonContent.Create(
+                new GetOrdersDTO()
+                {
+                    Customer_TelegramID = chatid.ToString(),
+                });
+
+            var responce = await httpClient.PostAsync("http://localhost:5550/api/Order/GetOrdersOfCustomer", content, cancellationToken);
+            var responseJsonContent = await responce.Content.ReadAsStringAsync(cancellationToken);
+            return  JsonConvert.DeserializeObject<OrderModel[]?>(responseJsonContent);
         }
     }
 

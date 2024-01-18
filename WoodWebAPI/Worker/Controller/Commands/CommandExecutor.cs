@@ -50,9 +50,15 @@ public class CommandExecutor : IUpdateHandler
         }
         else if (update.Message == null && update.CallbackQuery != null) // ожидаем на входе только нажатие на кнопку
         { 
-            CallbackQuery query = update.CallbackQuery;
+            CallbackQuery query = new CallbackQuery();
+            query.Data = update.CallbackQuery.Data;
             if (query.Data == null) //такое бывает, во избежании ошибок делаем проверку
                 return;
+
+            if (query.Data.IndexOf(':') > 0)
+            {
+                query.Data = query.Data.Substring(0, query.Data.IndexOf(':'));
+            }
 
             foreach (var command in commands)
             {

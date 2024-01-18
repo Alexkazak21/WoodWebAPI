@@ -18,7 +18,16 @@ public class DeleteOrderCommand : ICommand
         {
             if (update != null)
             {
-                int.TryParse(update?.CallbackQuery?.Data?.Substring(update.CallbackQuery.Data.IndexOf(':'), update.CallbackQuery.Data.Length - update.CallbackQuery.Data.IndexOf(':')), out var orderId);
+                int orderId = -1;
+                try
+                {
+                    int.TryParse(update?.CallbackQuery?.Data?.Substring(update.CallbackQuery.Data.IndexOf(':') + 1, update.CallbackQuery.Data.Length - 1 - update.CallbackQuery.Data.IndexOf(':')), out orderId);
+                }
+                catch (Exception ex)
+                {
+                    TelegramWorker.Logger.LogError("Can`t get order id while executing delete command");
+                }
+
 
 
 
@@ -40,7 +49,7 @@ public class DeleteOrderCommand : ICommand
                     userExist = await new MainCommand().CheckCustomer(chatid, cancellationToken);
                 }
 
-                if (userExist && chatid != -1)
+                if (userExist && chatid != -1 && orderId > 0)
                 {
                     using (HttpClient httpClient = new HttpClient())
                     {
@@ -63,6 +72,34 @@ public class DeleteOrderCommand : ICommand
                                                     InlineKeyboardButton.WithCallbackData("К заказам","/main"),
                                                     })
                             );
+                    }
+                }
+                else if (orderId <= 0 )
+                {
+                    var orders = await new MainCommand().CheckOrders(chatid, cancellationToken);
+
+                    if (orders != null && orders.Length > 0)
+                    {
+                        var keybordButtons = new List<InlineKeyboardButton>();
+                        for (int i = 0; i < orders.Length; i++)
+                        {
+                            keybordButtons.Add(
+                                InlineKeyboardButton.WithCallbackData($"{orders[i].OrderId}", $"/delete_order:{orders[i].Id}"));
+
+                        }
+
+                        InlineKeyboardMarkup? keyboard = null;
+
+                        keyboard = new InlineKeyboardMarkup(new[]
+                        {
+                            keybordButtons.ToArray<InlineKeyboardButton>()                                
+                        });
+
+                        await Client.SendTextMessageAsync(
+                                chatId: chatid,
+                                text: "Выберите заказ который хотите удалить",
+                                replyMarkup: keyboard,
+                                cancellationToken: cancellationToken);
                     }
                 }
             }

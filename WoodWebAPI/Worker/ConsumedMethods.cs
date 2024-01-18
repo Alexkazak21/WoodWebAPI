@@ -1,5 +1,4 @@
-﻿using Telegram.BotAPI.AvailableMethods;
-namespace WoodWebAPI.Worker;
+﻿namespace WoodWebAPI.Worker;
 
 public class ConsumedMethods
 {

@@ -34,6 +34,9 @@ public class TelegramWorker : BackgroundService
         // testing telegram connection
         var me = await API.GetMeAsync();
         Console.WriteLine($"My name is {me.FirstName}.");
+
+        ConsumedMethods activateDbConnection = new ConsumedMethods();
+        await activateDbConnection.GetAsync(cancellationToken);
         await API.DeleteMyCommandsAsync();
 
         var commands = new List<BotCommand>()
@@ -53,11 +56,11 @@ public class TelegramWorker : BackgroundService
                 Command = "main",
                 Description = "В главное меню"
             },
-            new BotCommand()
-            {
-                Command = "new_order",
-                Description = "Добавить заказ"
-            },
+            //new BotCommand()
+            //{
+            //    Command = "new_order",
+            //    Description = "Добавить заказ"
+            //},
             new BotCommand()
             {
                 Command = "cancel",
