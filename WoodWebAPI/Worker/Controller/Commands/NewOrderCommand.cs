@@ -64,10 +64,18 @@ public class NewOrderCommand : ICommand
                 }  
                 else if (orderList != null && orderList.Count() == 4)
                 {
+
+                    var inlineMarkup = new InlineKeyboardMarkup(
+                                new[]
+                                {
+                                    InlineKeyboardButton.WithCallbackData("К заказам", "/main")
+                                });
+
                     await Client.SendTextMessageAsync(
                         chatId: chatid,
                         text: "Запрещено создавать более 4-ёх заказов одновременно." +
-                        "\nОжидайте завершения предыдущих заказов."
+                        "\nОжидайте завершения предыдущих заказов.",
+                        replyMarkup: inlineMarkup
                         );
                 }
             }

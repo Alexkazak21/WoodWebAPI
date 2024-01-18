@@ -20,7 +20,7 @@ public class LoginCommand : ICommand
         var inlineMarkup = new InlineKeyboardMarkup(new[]
         {
            InlineKeyboardButton.WithWebApp(
-                                text: "Продолжить в приложении",
+                                text: "О нас",
                                 webAppInfo),
 
            InlineKeyboardButton.WithCallbackData(

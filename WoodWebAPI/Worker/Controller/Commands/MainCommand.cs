@@ -83,15 +83,29 @@ public class MainCommand : ICommand
 
                                 }
 
-
-                                keybordButtons.Add(
-                                    InlineKeyboardButton.WithCallbackData("Добавить заказ", "/new_order"));
-
-                                var keyboard = new InlineKeyboardMarkup(
-                                    new[]
+                                InlineKeyboardMarkup? keyboard = null;
+                                if (orders.Length < 4)
+                                {
+                                    keyboard = new InlineKeyboardMarkup(new[]
                                     {
-                                       keybordButtons.ToArray(),
+                                        keybordButtons.ToArray<InlineKeyboardButton>(),
+                                        [
+                                            InlineKeyboardButton.WithCallbackData("Добавить заказ", "/new_order"),
+                                        ]
                                     });
+                                }
+                                else 
+                                {
+                                    keyboard = new InlineKeyboardMarkup(new[]
+                                    {
+                                        keybordButtons.ToArray<InlineKeyboardButton>(),
+                                        [
+                                            InlineKeyboardButton.WithCallbackData("Удалить заказ", "/remove_order"),
+                                        ]
+                                    });                                   
+                                }
+
+                                
 
                                 await Client.SendTextMessageAsync(
                                     chatId: chatid,

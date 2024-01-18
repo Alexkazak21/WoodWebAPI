@@ -26,7 +26,8 @@ namespace WoodWebAPI.Worker.Controller
             }
             else if (update.CallbackQuery != null && update.Message == null)
             {
-                _logger.LogInformation(update.CallbackQuery.Id + "\tCallback Query has come");
+                _logger.LogInformation(update.CallbackQuery.Id + "\tCallback Query has come"
+                    + $"\n\tWith text:   {update.CallbackQuery.Data}");
 
                 await _distributor.HandleUpdateAsync(_bot, update, cancellationToken);
             }

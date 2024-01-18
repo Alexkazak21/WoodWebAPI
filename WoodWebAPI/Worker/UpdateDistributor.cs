@@ -19,29 +19,7 @@ namespace WoodWebAPI.Worker
             if( update.Message != null && update.CallbackQuery == null)
             {
                 long chatId = update.Message.Chat.Id;
-
-                //if (update.Message.ReplyToMessage != null && update.Message.ReplyToMessage.Text == "Введите пароль! ( Ответом на это сообщение)")
-                //{
-                //    CallbackQuery callbackQuery = new CallbackQuery()
-                //    {
-                //        Data = "signUp",
-                //        Id = new Random().NextInt64().ToString(),
-                //        From = update.Message.From,
-                //        Message = new Message()
-                //        {
-                //            Text = "Пользовательский пароль",
-                //        },
-                //    };
-
-                //    update.CallbackQuery = callbackQuery;
-                //    await SendUpdate(chatId, botClient, update, cancellationToken);
-                //}
-                //else
-                //{
-                    await SendUpdate(chatId, botClient, update, cancellationToken);
-                //}
-                
-               
+                await SendUpdate(chatId, botClient, update, cancellationToken);
             }
             else if(update.CallbackQuery != null)
             {

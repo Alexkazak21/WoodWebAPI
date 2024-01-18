@@ -63,14 +63,14 @@ public class StartCommand : ICommand
         var keyboardUserExist = new InlineKeyboardMarkup(
             new[]
             {
-                InlineKeyboardButton.WithCallbackData("Вход","login"),
+                InlineKeyboardButton.WithCallbackData("Вход","/login"),
             }
             );
 
         var keyboardUserNotExist = new InlineKeyboardMarkup(
             new[]
             {
-                InlineKeyboardButton.WithCallbackData("Регистрация", "signUp"),
+                InlineKeyboardButton.WithCallbackData("Регистрация", "/signUp"),
             });
 
         Message message = new Message();
