@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using WoodWebAPI.Data.Models.Customer;
 
@@ -16,8 +17,18 @@ public class StartCommand : ICommand
     {
         if (!cancellationToken.IsCancellationRequested)
         {
-            long chatId = update.Message.Chat.Id;
-            await Client.SendTextMessageAsync(chatId, "Привет! " + update.Message.Chat.FirstName);
+            long chatId = -1;
+
+            if(update.Type == UpdateType.Message)
+            {            
+                chatId = update.Message.Chat.Id;
+                await Client.SendTextMessageAsync(chatId, "Привет! " + update.Message.Chat.FirstName);
+            }
+            else if(update.Type == UpdateType.CallbackQuery)
+            {
+                chatId = update.CallbackQuery.From.Id;
+                await Client.SendTextMessageAsync(chatId, "Привет! " + update.CallbackQuery.From.FirstName);
+            }
 
             var userExist = false;
             using (HttpClient client = new HttpClient())
@@ -48,8 +59,7 @@ public class StartCommand : ICommand
                     }
                 }
             }
-
-            await SendButtonsAsync(update.Message.Chat.Id, userExist);
+            await SendButtonsAsync(chatId, userExist);
 
         }
         else
