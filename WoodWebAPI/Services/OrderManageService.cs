@@ -98,7 +98,7 @@ namespace WoodWebAPI.Services
                 var customer = await _db.Customers.Where(x => x.TelegramID == model.CustomerTelegramId).FirstOrDefaultAsync();
                 if (customer != null)
                 {
-                    var data = await _db.Orders.Where((x) => x.CustomerId == customer.CustomerId && x.OrderId == model.OrderId && x.IsVerified == false).ToArrayAsync();
+                    var data = await _db.Orders.Where(x => x.CustomerId == customer.CustomerId && x.Id == model.OrderId && x.IsVerified == false).ToArrayAsync();
                     return await Delete(data);
                 }
                 return new ExecResultModel()
