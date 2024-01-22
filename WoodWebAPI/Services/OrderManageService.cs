@@ -49,7 +49,7 @@ namespace WoodWebAPI.Services
                     return new ExecResultModel()
                     {
                         Success = true,
-                        Message = $"Order {order.Entity.OrderId} was added successfully to Customer {customer.Name}!",
+                        Message = $"Заказ {order.Entity.OrderId} был успешно добавлен пользователю {customer.Name}!",
                     };
                 }
             }
@@ -57,7 +57,7 @@ namespace WoodWebAPI.Services
             return new ExecResultModel()
             {
                 Success = false,
-                Message = "Can`t find Customer to add any order",
+                Message = "Не возможно найти пользователя для добавления заказа",
             };
         }
 
@@ -73,7 +73,7 @@ namespace WoodWebAPI.Services
                 return new ExecResultModel()
                 {
                     Success = false,
-                    Message = $"NO orders with specified ID was found ",
+                    Message = $"Не найдено заказов с указанным ID",
                 };
             }
             else
@@ -81,14 +81,14 @@ namespace WoodWebAPI.Services
                 return new ExecResultModel()
                 {
                     Success = false,
-                    Message = "More then 1 order found",
+                    Message = "Найдено долее 1 заказа",
                 };
             }
 
             return new ExecResultModel()
             {
                 Success = true,
-                Message = "Order was fully deleted",
+                Message = "Заказ удалён",
             };
         }
         public async Task<ExecResultModel> DeleteAsync(DeleteOrderDTO model)
@@ -104,7 +104,7 @@ namespace WoodWebAPI.Services
                 return new ExecResultModel()
                 {
                     Success = false,
-                    Message = "Specified customer not found",
+                    Message = "Указанный пользователь не найден",
                 };
             }
             else
@@ -112,7 +112,7 @@ namespace WoodWebAPI.Services
                 return new ExecResultModel()
                 {
                     Success = false,
-                    Message = $"No data presented",
+                    Message = $"Данных нет",
                 };
             }
         }
@@ -131,7 +131,7 @@ namespace WoodWebAPI.Services
                 return new ExecResultModel()
                 {
                     Success = false,
-                    Message = "Specified customer not found",
+                    Message = "Указанный пользователь не найден",
                 };
             }
             else
@@ -139,7 +139,7 @@ namespace WoodWebAPI.Services
                 return new ExecResultModel()
                 {
                     Success = false,
-                    Message = $"No data presented",
+                    Message = $"Данных нет",
                 };
             }
         }
@@ -236,7 +236,7 @@ namespace WoodWebAPI.Services
                         return new ExecResultModel()
                         {
                             Success = true,
-                            Message = "Order was verified",
+                            Message = "Заказ принят в работу",
                         };
                     }
                     else
@@ -244,7 +244,7 @@ namespace WoodWebAPI.Services
                         return new ExecResultModel()
                         {
                             Success = false,
-                            Message = "selected order doesn`t belong to specified user or already verified",
+                            Message = "Выбранный заказ не пренадлежит указанному пользователю или уже полтверждён",
                         };
                     }
                 }
@@ -253,7 +253,7 @@ namespace WoodWebAPI.Services
                     return new ExecResultModel()
                     {
                         Success = false,
-                        Message = "no user found",
+                        Message = "пользователя не найдено",
                     };
                 }
 
@@ -263,7 +263,7 @@ namespace WoodWebAPI.Services
                 return new ExecResultModel()
                 {
                     Success = false,
-                    Message = "Input model was empty",
+                    Message = "Входная модель оказалась пуста",
                 };
             }
         }
