@@ -14,7 +14,17 @@ public class CancelCommand : ICommand
         {
             long chatId = update.Message.Chat.Id;
             var messageId = update.Message.MessageId;
-            await Client.SendTextMessageAsync(chatId, "Операция отменена. Вы вернётесь в начало");
+            await Client.SendTextMessageAsync(
+    chatId:chatId, 
+    text:"Операция отменена. Вы вернётесь в начало",
+    replyMarkup: new InlineKeyboardMarkup(
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("В начало","/start"),
+                                        InlineKeyboardButton.WithCallbackData("Главное меню","/main"),
+                                    }),
+    cancellationToken: cancellationToken
+    );
         }
         else
         {
