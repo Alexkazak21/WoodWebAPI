@@ -6,9 +6,9 @@ public class ConsumedMethods
     {
         using (var client = new HttpClient())
         {
-            await Task.Delay(1000,cancellationToken);
+            await Task.Delay(1000, cancellationToken);
             //var content = new StringContent("");
-            var result = await client.PostAsJsonAsync("http://localhost:5550/api/Customer/GetCustomers",new StringContent(""),cancellationToken);
+            var result = await client.PostAsJsonAsync($"{TelegramWorker.BaseUrl}/api/Customer/GetCustomers", new StringContent(""), cancellationToken);
             return await result.Content.ReadAsStringAsync();
         }
     }

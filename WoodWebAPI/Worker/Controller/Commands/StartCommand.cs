@@ -18,49 +18,21 @@ public class StartCommand : ICommand
         if (!cancellationToken.IsCancellationRequested)
         {
             long chatId = -1;
+            var messageId = -1;
 
-            if(update.Type == UpdateType.Message)
-            {            
+            if (update.Type == UpdateType.Message)
+            {
                 chatId = update.Message.Chat.Id;
-                await Client.SendTextMessageAsync(chatId, "Привет! " + update.Message.Chat.FirstName);
+                var userName = update.Message.From.FirstName;
+                await SendButtonsAsync(update, chatId, userName: userName);
             }
-            else if(update.Type == UpdateType.CallbackQuery)
+            else if (update.Type == UpdateType.CallbackQuery)
             {
                 chatId = update.CallbackQuery.From.Id;
-                await Client.SendTextMessageAsync(chatId, "Привет! " + update.CallbackQuery.From.FirstName);
+                messageId = update.CallbackQuery.Message.MessageId;
+                var userName = update.CallbackQuery.From.FirstName;
+                await SendButtonsAsync(update, chatId, messageId, userName);
             }
-
-            var userExist = false;
-            using (HttpClient client = new HttpClient())
-            {
-                HttpResponseMessage response = await client.PostAsync("http://localhost:5550/api/Customer/GetCustomers", new StringContent(""));
-
-                if (response.IsSuccessStatusCode)
-                {
-                    string responseJsonContent = await response.Content.ReadAsStringAsync();
-                    GetCustomerModel[] customers = JsonConvert.DeserializeObject<GetCustomerModel[]>(responseJsonContent);
-
-                    foreach (var customer in customers)
-                    {
-                        try
-                        {
-                            if (long.Parse(customer.TelegramId) == chatId)
-                            {
-                                userExist = true;
-                            }
-                        }
-                        catch (FormatException ex)
-                        {
-                            TelegramWorker.Logger
-                                 .LogWarning("Startup command\n" + 
-                                "\tНевозможно распарсить идентификатор, скорее всего он не равен типу long");
-                        }
-
-                    }
-                }
-            }
-            await SendButtonsAsync(chatId, userExist);
-
         }
         else
         {
@@ -68,8 +40,38 @@ public class StartCommand : ICommand
         }
     }
 
-    private async Task SendButtonsAsync(long chatId, bool userExist)
+    private async Task SendButtonsAsync(Update update, long chatId, int messageId = -1, string userName = null, CancellationToken cancellationToken = default)
     {
+        var userExist = false;
+        using (HttpClient client = new HttpClient())
+        {
+            HttpResponseMessage response = await client.PostAsync($"{TelegramWorker.BaseUrl}/api/Customer/GetCustomers", new StringContent(""));
+
+            if (response.IsSuccessStatusCode)
+            {
+                string responseJsonContent = await response.Content.ReadAsStringAsync();
+                GetCustomerModel[] customers = JsonConvert.DeserializeObject<GetCustomerModel[]>(responseJsonContent);
+
+                foreach (var customer in customers)
+                {
+                    try
+                    {
+                        if (long.Parse(customer.TelegramId) == chatId)
+                        {
+                            userExist = true;
+                        }
+                    }
+                    catch (FormatException ex)
+                    {
+                        TelegramWorker.Logger
+                             .LogWarning("Startup command\n" +
+                            "\tНевозможно распарсить идентификатор, скорее всего он не равен типу long");
+                    }
+
+                }
+            }
+        }
+
         var keyboardUserExist = new InlineKeyboardMarkup(
             new[]
             {
@@ -83,15 +85,51 @@ public class StartCommand : ICommand
                 InlineKeyboardButton.WithCallbackData("Регистрация", "/signUp"),
             });
 
-        Message message = new Message();
-        if (userExist)
+        if (messageId == -1)
         {
-            message = await Client.SendTextMessageAsync(chatId, "Для продолжения, войдите в систему", replyMarkup: keyboardUserExist);
+            if (userExist)
+            {
+                await Client.SendTextMessageAsync(
+                chatId: chatId,
+                    text: $"Привет! {userName}" +
+                    "\nДля продолжения, войдите в систему",
+                    replyMarkup: keyboardUserExist,
+                    cancellationToken: cancellationToken);
+            }
+            else
+            {
+                await Client.SendTextMessageAsync(
+                    chatId: chatId,
+                    text: $"Привет! {userName}" +
+                    "\nДля продолжения, зарегистрируйтесь",
+                    replyMarkup: keyboardUserNotExist,
+                    cancellationToken: cancellationToken);
+            }
         }
         else
         {
-            message = await Client.SendTextMessageAsync(chatId, "Для продолжения, зарегистрируйтесь", replyMarkup: keyboardUserNotExist);
+            if (userExist)
+            {
+                await Client.EditMessageTextAsync(
+                chatId: chatId,
+                    text: $"Привет! {userName}" +
+                    "\nДля продолжения, войдите в систему",
+                    messageId: messageId,
+                    replyMarkup: keyboardUserExist,
+                    cancellationToken: cancellationToken);
+            }
+            else
+            {
+                await Client.EditMessageTextAsync(
+                    chatId: chatId,
+                    text: $"Привет! {userName}" +
+                    "\nДля продолжения, зарегистрируйтесь",
+                    messageId: messageId,
+                    replyMarkup: keyboardUserNotExist,
+                    cancellationToken: cancellationToken);
+            }
         }
+
 
     }
 

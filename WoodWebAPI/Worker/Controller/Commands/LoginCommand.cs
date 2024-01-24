@@ -31,8 +31,9 @@ public class LoginCommand : ICommand
 
         if (update.Type == UpdateType.CallbackQuery)
         {
-            await Client.SendTextMessageAsync(
+            await Client.EditMessageTextAsync(
             chatId: update.CallbackQuery.From.Id,
+            messageId: update.CallbackQuery.Message.MessageId,
             text: "Выберите вариант",
             replyMarkup: inlineMarkup);
         }

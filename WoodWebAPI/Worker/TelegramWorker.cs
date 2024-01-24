@@ -6,19 +6,23 @@ namespace WoodWebAPI.Worker;
 public class TelegramWorker : BackgroundService
 {
     private readonly ILogger<TelegramWorker> _logger;
-    public readonly string _telegtamToken;
+
     private readonly string _ngrokURL;
 
+    private readonly string _telegtamToken;
+
+
+    public static string BaseUrl { get; private set; }
     public static TelegramBotClient? API { get; set; }
     public static ILogger<TelegramWorker>? Logger { get; set; }
-    public static string? Token { get; private set; }
-    public TelegramWorker(ILogger<TelegramWorker> logger, string telegtamToken, string ngrokURL)
+
+    public TelegramWorker(ILogger<TelegramWorker> logger, string telegtamToken, string ngrokURL, string baseUrl)
     {
         _logger = logger;
         _telegtamToken = telegtamToken;
         _ngrokURL = ngrokURL;
         Logger = _logger;
-        Token = telegtamToken;
+        BaseUrl = baseUrl;
     }
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -26,7 +30,7 @@ public class TelegramWorker : BackgroundService
         //initialisation of telegram bot api
         var botToken = _telegtamToken;
         API = new TelegramBotClient(botToken);
-        
+
         //setting telegram webhook
 
         await API.SetWebhookAsync(_ngrokURL);
@@ -49,23 +53,23 @@ public class TelegramWorker : BackgroundService
             new BotCommand()
             {
                 Command = "login",
-                Description = "Авторизоция"
+                Description = "Авторизация"
             },
             new BotCommand()
             {
                 Command = "main",
                 Description = "В главное меню"
             },
-            //new BotCommand()
-            //{
-            //    Command = "new_order",
-            //    Description = "Добавить заказ"
-            //},
             new BotCommand()
             {
                 Command = "cancel",
                 Description = "Отменить действие"
             },
+            new BotCommand()
+            {
+                Command = "clear",
+                Description = "Удалить сообщения"
+            }
         };
 
         await API.SetMyCommandsAsync(commands);

@@ -49,7 +49,7 @@ namespace WoodWebAPI.Services
                     return new ExecResultModel()
                     {
                         Success = true,
-                        Message = $"Заказ {order.Entity.OrderId} был успешно добавлен пользователю {customer.Name}!",
+                        Message = $"Заказ {order.Entity.Id} был успешно добавлен пользователю {customer.Name}!",
                     };
                 }
             }
@@ -65,7 +65,9 @@ namespace WoodWebAPI.Services
         {
             if (data.Length == 1)
             {
-                _db.Orders.Remove(data[0]);
+                
+                var context = await _db.Orders.Include(x => x.Timbers).FirstAsync(x => x.Id == data[0].Id);
+                _db.Orders.Remove(context);
                 await _db.SaveChangesAsync();
             }
             else if (data.Length == 0)

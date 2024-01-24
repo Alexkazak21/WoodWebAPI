@@ -18,9 +18,7 @@ namespace WoodWebAPI.Worker.Controller
         {
             if (update.Message != null) // проверка на наличие текстового сообщения
             {
-                _logger.LogInformation(update.Message.Chat.Id + "\t" + update.Message.Text);
-
-                
+                _logger.LogInformation(update.Message.Chat.Id + "\t" + update.Message.Text);                
 
                 await _distributor.HandleUpdateAsync(_bot, update, cancellationToken);
             }

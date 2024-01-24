@@ -3,15 +3,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using System.Text;
 using WoodWebAPI.Auth;
 using WoodWebAPI.Data;
 using WoodWebAPI.Services;
 using WoodWebAPI.Worker;
-using WoodWebAPI.Worker.Controller.Commands;
-using Telegram.Bot.Polling;
 
 namespace WoodWebAPI
 {
@@ -23,6 +21,7 @@ namespace WoodWebAPI
             var configuration = builder
                 .Configuration
                 .AddJsonFile("appsettings.local.json", false)
+                .AddJsonFile("Properties\\launchSettings.json")
                 .Build();
 
             // Add services to the container.
@@ -105,13 +104,14 @@ namespace WoodWebAPI
             builder.Services.AddScoped<ICustomerManage, CustomerManageService>();
             builder.Services.AddScoped<IOrderManage, OrderManageService>();
             builder.Services.AddScoped<ITimberManage, TimberManageService>();
-   
+
 
             // Adding Background service worker to work with Telegram
             builder.Services.AddHostedService(options => new TelegramWorker(
                 options.GetRequiredService<ILogger<TelegramWorker>>(),
-                configuration.GetValue<string>("TelegramToken") ?? throw new ArgumentNullException("TelegramToken", "This field must be specified"),
-                configuration.GetSection("ngrok").GetValue<string>("URL") ?? throw new ArgumentNullException("NGROK URL","URL must be specified")
+                configuration.GetValue<string>("TelegramToken") ?? throw new ArgumentNullException("TelegramToken", "Telegtam Token field must be specified"),
+                configuration.GetSection("ngrok").GetValue<string>("URL") ?? throw new ArgumentNullException("NGROK URL", " NGROK URL must be specified"),
+                configuration.GetSection("profiles").GetSection("http").GetValue<string>("applicationUrl") ?? throw new ArgumentNullException("BaseUrl", "BaseUrl field must be specified")
                 ));
 
 
@@ -128,7 +128,7 @@ namespace WoodWebAPI
 
             app.UseAuthentication();
             app.UseAuthorization();
-            
+
 
             app.MapControllers();
 

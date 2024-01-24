@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WoodWebAPI.Data.Models.Order;
-
 using WoodWebAPI.Services;
 
 namespace WoodWebAPI.Controllers
@@ -35,7 +34,7 @@ namespace WoodWebAPI.Controllers
         [HttpPost]
         public async Task<OrderModel[]?> GetFullOrdersList()
         {
-            
+
             var data = await _entityService.GetFullOrdersArrayAsync();
 
             if (data != null)
@@ -53,10 +52,10 @@ namespace WoodWebAPI.Controllers
 
             if (data.Success)
             {
-                return Ok(data.Message);
+                return Ok(data);
             }
 
-            return BadRequest(data.Message);
+            return BadRequest(data);
         }
 
         [HttpPost]
@@ -66,10 +65,10 @@ namespace WoodWebAPI.Controllers
 
             if (data.Success)
             {
-                return Ok(data.Message);
+                return Ok(data);
             }
 
-            return BadRequest(data.Message);
+            return BadRequest(data);
         }
 
         [Authorize]
@@ -80,10 +79,10 @@ namespace WoodWebAPI.Controllers
 
             if (data.Success)
             {
-                return Ok(data.Message);
+                return Ok(data);
             }
 
-            return BadRequest(data.Message);
+            return BadRequest(data);
         }
 
         [Authorize]
@@ -94,10 +93,10 @@ namespace WoodWebAPI.Controllers
 
             if (data.Success)
             {
-                return Ok(data.Message);
+                return Ok(data);
             }
 
-            return BadRequest(data.Message);
+            return BadRequest(data);
         }
 
     }
