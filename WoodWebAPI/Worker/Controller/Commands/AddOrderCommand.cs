@@ -3,11 +3,12 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Order;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
-public class NewOrderCommand : ICommand
+public class AddOrderCommand : ICommand
 {
     public TelegramBotClient Client => TelegramWorker.API;
 
@@ -21,6 +22,8 @@ public class NewOrderCommand : ICommand
             {
                 var chatid = update.CallbackQuery.From.Id;
 
+                var messageid = update.CallbackQuery.Message.MessageId;
+
                 OrderModel[]? orderList = null;
                 using (HttpClient client = new HttpClient())
                 {
@@ -30,7 +33,7 @@ public class NewOrderCommand : ICommand
                     };
                     var content = JsonContent.Create(getOrders);
 
-                    var responce = await client.PostAsync("http://localhost:5550/api/Order/GetOrdersOfCustomer", content, cancellationToken);
+                    var responce = await client.PostAsync($"{TelegramWorker.BaseUrl}/api/Order/GetOrdersOfCustomer", content, cancellationToken);
 
                     orderList = JsonConvert.DeserializeObject<OrderModel[]?>(await responce.Content.ReadAsStringAsync(cancellationToken));                    
                 }
@@ -45,9 +48,10 @@ public class NewOrderCommand : ICommand
                         };
                         var content = JsonContent.Create(createOrder);
 
-                        var responce = await client.PostAsync("http://localhost:5550/api/Order/CreateOrder", content, cancellationToken);
+                        var request = await client.PostAsync("http://localhost:5550/api/Order/CreateOrder", content, cancellationToken);
 
-                        if (responce.IsSuccessStatusCode)
+                        var response = JsonConvert.DeserializeObject<ExecResultModel>(await request.Content.ReadAsStringAsync());
+                        if (request.IsSuccessStatusCode)
                         {
                             var inlineMarkup = new InlineKeyboardMarkup(
                                 new[]
@@ -55,10 +59,12 @@ public class NewOrderCommand : ICommand
                                     InlineKeyboardButton.WithCallbackData("К заказам", "/main")
                                 });
 
-                            await Client.SendTextMessageAsync(
+                            await Client.EditMessageTextAsync(
                                 chatId: chatid,
-                                text: await responce.Content.ReadAsStringAsync(),
-                                replyMarkup: inlineMarkup);
+                                text: response.Message,
+                                messageId: messageid,
+                                replyMarkup: inlineMarkup,
+                                cancellationToken: cancellationToken);
                         }
                     }
                 }  
@@ -71,10 +77,12 @@ public class NewOrderCommand : ICommand
                                     InlineKeyboardButton.WithCallbackData("К заказам", "/main")
                                 });
 
-                    await Client.SendTextMessageAsync(
+
+                    await Client.EditMessageTextAsync(
                         chatId: chatid,
                         text: "Запрещено создавать более 4-ёх заказов одновременно." +
                         "\nОжидайте завершения предыдущих заказов.",
+                        messageId: messageid,
                         replyMarkup: inlineMarkup
                         );
                 }

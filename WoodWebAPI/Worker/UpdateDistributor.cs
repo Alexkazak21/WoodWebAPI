@@ -19,6 +19,18 @@ namespace WoodWebAPI.Worker
             if( update.Message != null && update.CallbackQuery == null)
             {
                 long chatId = update.Message.Chat.Id;
+
+                if (update.Message.ReplyToMessage != null && update.Message.ReplyToMessage.Text.StartsWith("Введите длину и диаметр бревна по верхушке"))
+                {
+                    var textParams = update.Message.Text.Split(':');
+                    var orderId = int.Parse(update.Message.ReplyToMessage.Text.Split('-', StringSplitOptions.TrimEntries)[^1]);
+                    var diametr = textParams[0];
+                    var length = textParams[1];
+                    update.CallbackQuery = new CallbackQuery()
+                    {
+                        Data = $"/add_timber:{orderId}:{diametr}:{length}",
+                    };
+                }
                 await SendUpdate(chatId, botClient, update, cancellationToken);
             }
             else if(update.CallbackQuery != null)

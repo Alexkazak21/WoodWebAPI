@@ -41,7 +41,7 @@ public class TimberManageService : ITimberManage
                     return new ExecResultModel()
                     {
                         Success = false,
-                        Message = "Length most be in range of 1.5m to 6.9m"
+                        Message = "Длина должна быть в диапазоне от 1.5m до 6.9m"
                     };
                 }
 
@@ -50,7 +50,7 @@ public class TimberManageService : ITimberManage
                     return new ExecResultModel()
                     {
                         Success = false,
-                        Message = "Diameter most be in range of 14 sm to 100 sm"
+                        Message = "Диаметр должн быть в диапазоне от 14 см до 100 см"
                     };
                 }
 
@@ -97,7 +97,7 @@ public class TimberManageService : ITimberManage
                 return new ExecResultModel()
                 {
                     Success = true,
-                    Message = "Timber was successfully added"
+                    Message = "Бревно успешно добавлено"
                 };
             }
             catch (Exception ex)
@@ -105,7 +105,7 @@ public class TimberManageService : ITimberManage
                 return new ExecResultModel()
                 {
                     Success = false,
-                    Message = "Something went wrong, please contact application administartor"
+                    Message = "Что-то пошло не так, пожалуйста свяжитесь с администратором"
                 };
             }
         }
@@ -113,7 +113,7 @@ public class TimberManageService : ITimberManage
         return new ExecResultModel()
         {
             Success = false,
-            Message = "Specified order wasn`t found"
+            Message = "Указанный каказ не найден"
         };
     }
 

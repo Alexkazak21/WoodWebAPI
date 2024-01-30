@@ -1,11 +1,7 @@
-﻿using Newtonsoft.Json;
-using System.Threading;
-using Telegram.Bot;
+﻿using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
-using WoodWebAPI.Data.Models.Customer;
-using WoodWebAPI.Data.Models.Order;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
@@ -25,31 +21,37 @@ public class MainCommand : ICommand
 
                 long chatid = -1;
 
+                var messageId = 0;
+
                 if (update.Type == UpdateType.Message)
                 {
                     chatid = update.Message.Chat.Id;
 
-                    userExist = await CheckCustomer(chatid, cancellationToken);
+                    messageId = update.Message.MessageId;
 
+                    userExist = await new CommonChecks().CheckCustomer(chatid, cancellationToken);
                 }
                 else if (update.Type == UpdateType.CallbackQuery)
                 {
                     chatid = update.CallbackQuery.From.Id;
 
-                    userExist = await CheckCustomer(chatid, cancellationToken);
+                    messageId = update.CallbackQuery.Message.MessageId;
+
+                    userExist = await new CommonChecks().CheckCustomer(chatid, cancellationToken);
                 }
 
                 if (userExist && chatid != -1)
                 {
-                    var orders = await CheckOrders(chatid, cancellationToken);
+                    var orders = await new CommonChecks().CheckOrdersOfCustomer(chatid, cancellationToken);
 
                     if (orders != null)
                     {
                         if (orders.Length == 0)
-                        {
-                            await Client.SendTextMessageAsync(
+                        { 
+                            await Client.EditMessageTextAsync(
                                 chatId: chatid,
                                 text: "У вас пока нет заказов. \nХотите создать заказ?",
+                                messageId: messageId,
                                 replyMarkup: new InlineKeyboardMarkup(
                                                 new[]
                                                 {
@@ -57,11 +59,17 @@ public class MainCommand : ICommand
                                                 }),
                                 cancellationToken: cancellationToken);
                         }
-                        else if (orders.Length > 5)
+                        else if (orders.Length >= 5)
                         {
-                            await Client.SendTextMessageAsync(
+                            await Client.EditMessageTextAsync(
                                 chatId: chatid,
                                 text: "Максимальное колличество одновременных заказов 4",
+                                messageId: messageId,
+                                replyMarkup: new InlineKeyboardMarkup(
+                                                new[]
+                                                {
+                                                    InlineKeyboardButton.WithCallbackData("К заказам","/main"),
+                                                }),
                                 cancellationToken: cancellationToken);
                         }
                         else if (orders != null && orders.Length < 5)
@@ -70,7 +78,7 @@ public class MainCommand : ICommand
                             for (int i = 0; i < orders.Length; i++)
                             {
                                 keybordButtons.Add(
-                                    InlineKeyboardButton.WithCallbackData($"{orders[i].OrderId}", $"/show_order:{orders[i].Id}"));
+                                    InlineKeyboardButton.WithCallbackData($"{orders[i].Id}", $"/show_order:{orders[i].Id}"));
 
                             }
 
@@ -101,11 +109,24 @@ public class MainCommand : ICommand
 
 
 
-                            await Client.SendTextMessageAsync(
+                            if (update.Type == UpdateType.CallbackQuery)
+                            {
+                                await Client.EditMessageTextAsync(
                                 chatId: chatid,
                                 text: "Выберите заказ",
+                                messageId: update.CallbackQuery.Message.MessageId,
                                 replyMarkup: keyboard,
                                 cancellationToken: cancellationToken);
+                            }
+                            else
+                            {
+                                await Client.EditMessageTextAsync(
+                                                                chatId: chatid,
+                                                                text: "Выберите заказ",
+                                                                messageId: update.Message.MessageId,
+                                                                replyMarkup: keyboard,
+                                                                cancellationToken: cancellationToken);
+                            }                            
                         }
                     }
                     else
@@ -130,59 +151,5 @@ public class MainCommand : ICommand
                 }
             }
         }
-    }
-    public async Task<OrderModel[]?> CheckOrders(long chatid,CancellationToken cancellationToken)
-    {
-        using (HttpClient httpClient = new HttpClient())
-        {
-            var content = JsonContent.Create(
-                new GetOrdersDTO()
-                {
-                    Customer_TelegramID = chatid.ToString(),
-                });
-
-            var responce = await httpClient.PostAsync("http://localhost:5550/api/Order/GetOrdersOfCustomer", content, cancellationToken);
-            var responseJsonContent = await responce.Content.ReadAsStringAsync(cancellationToken);
-            return  JsonConvert.DeserializeObject<OrderModel[]?>(responseJsonContent);
-        }
-    }
-
-    public async Task<bool> CheckCustomer(long chatid, CancellationToken cancellationToken)
-    {
-        if (!cancellationToken.IsCancellationRequested)
-        {
-            using (HttpClient httpClient = new HttpClient())
-            {
-                var responce = await httpClient.PostAsync("http://localhost:5550/api/Customer/GetCustomers", new StringContent(""), cancellationToken);
-                var responseJsonContent = await responce.Content.ReadAsStringAsync(cancellationToken);
-                GetCustomerModel[] customers = JsonConvert.DeserializeObject<GetCustomerModel[]>(responseJsonContent);
-
-                if (customers != null)
-                {
-                    foreach (var customer in customers)
-                    {
-                        try
-                        {
-                            if (long.Parse(customer.TelegramId) == chatid)
-                            {
-                                return true;
-                            }
-                        }
-                        catch (FormatException ex)
-                        {
-                            TelegramWorker.Logger
-                                 .LogWarning("Main command\n" +
-                                "\tНевозможно распарсить идентификатор, скорее всего он не равен типу long", cancellationToken);
-                        }
-
-                    }
-                }
-
-                return false;
-            }
-        }
-
-        return false;
-
     }
 }

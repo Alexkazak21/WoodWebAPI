@@ -1,7 +1,9 @@
-﻿using Telegram.Bot;
+﻿using Newtonsoft.Json;
+using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Order;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
@@ -28,9 +30,6 @@ public class DeleteOrderCommand : ICommand
                     TelegramWorker.Logger.LogError("Can`t get order id while executing delete command");
                 }
 
-
-
-
                 var userExist = false;
 
                 long chatid = -1;
@@ -39,14 +38,13 @@ public class DeleteOrderCommand : ICommand
                 {
                     chatid = update.Message.Chat.Id;
 
-                    userExist = await new MainCommand().CheckCustomer(chatid, cancellationToken);
-
+                    userExist = await new CommonChecks().CheckCustomer(chatid, cancellationToken);
                 }
                 else if (update.Type == UpdateType.CallbackQuery)
                 {
                     chatid = update.CallbackQuery.From.Id;
 
-                    userExist = await new MainCommand().CheckCustomer(chatid, cancellationToken);
+                    userExist = await new CommonChecks().CheckCustomer(chatid, cancellationToken);
                 }
 
                 if (userExist && chatid != -1 && orderId > 0)
@@ -60,23 +58,56 @@ public class DeleteOrderCommand : ICommand
                                 OrderId = orderId,
                             });
 
-                        var request = await httpClient.PostAsync("http://localhost:5550/api/Order/DeleteOrder", content, cancellationToken);
+                        var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Order/DeleteOrder", content, cancellationToken);
+                        
                         var response = await request.Content.ReadAsStringAsync(cancellationToken);
 
-                        await Client.SendTextMessageAsync(
+                        var result = JsonConvert.DeserializeObject<ExecResultModel>(response);
+
+                        if(result != null && result.Success)
+                        {
+                            await Client.EditMessageTextAsync(
                             chatId: chatid,
-                            text: $"{response}",
+                            text: $"{result.Message}",
+                            messageId: update.CallbackQuery.Message.MessageId,
                             replyMarkup: new InlineKeyboardMarkup(
                                                     new[]
                                                     {
                                                     InlineKeyboardButton.WithCallbackData("К заказам","/main"),
                                                     })
                             );
+                        }
+                        else if(result != null && !result.Success)
+                        {
+                            await Client.EditMessageTextAsync(
+                                chatId: chatid,
+                                text: $"{response}",
+                                messageId: update.CallbackQuery.Message.MessageId,
+                                replyMarkup: new InlineKeyboardMarkup(
+                                                        new[]
+                                                        {
+                                                    InlineKeyboardButton.WithCallbackData("К заказам","/main"),
+                                                        })
+                                );
+                        }
+                        else 
+                        {
+                            await Client.EditMessageTextAsync(
+                            chatId: chatid,
+                            text: $"Произохла непредвиденная ошибка, попытайтесь снова",
+                            messageId: update.CallbackQuery.Message.MessageId,
+                            replyMarkup: new InlineKeyboardMarkup(
+                                                    new[]
+                                                    {
+                                                    InlineKeyboardButton.WithCallbackData("К заказам","/main"),
+                                                    })
+                            );
+                        }
                     }
                 }
                 else if (orderId <= 0 )
                 {
-                    var orders = await new MainCommand().CheckOrders(chatid, cancellationToken);
+                    var orders = await new CommonChecks().CheckOrdersOfCustomer(chatid, cancellationToken);
 
                     if (orders != null && orders.Length > 0)
                     {
@@ -84,7 +115,7 @@ public class DeleteOrderCommand : ICommand
                         for (int i = 0; i < orders.Length; i++)
                         {
                             keybordButtons.Add(
-                                InlineKeyboardButton.WithCallbackData($"{orders[i].OrderId}", $"/delete_order:{orders[i].Id}"));
+                                InlineKeyboardButton.WithCallbackData($"{orders[i].Id}", $"/delete_order:{orders[i].Id}"));
 
                         }
 
@@ -95,9 +126,10 @@ public class DeleteOrderCommand : ICommand
                             keybordButtons.ToArray<InlineKeyboardButton>()                                
                         });
 
-                        await Client.SendTextMessageAsync(
+                        await Client.EditMessageTextAsync(
                                 chatId: chatid,
                                 text: "Выберите заказ который хотите удалить",
+                                messageId: update.CallbackQuery.Message.MessageId,
                                 replyMarkup: keyboard,
                                 cancellationToken: cancellationToken);
                     }

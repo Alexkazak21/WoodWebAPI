@@ -1,5 +1,6 @@
 ﻿using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Newtonsoft.Json;
 using WoodWebAPI.Data.Models.Customer;
 using WoodWebAPI.Auth;
@@ -7,7 +8,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace WoodWebAPI.Worker.Controller.Commands
 {
-    public class SignUpCommand : ICommand, IListener
+    public class SignUpCommand : ICommand
     {
         public TelegramBotClient Client => TelegramWorker.API;
 
@@ -22,6 +23,17 @@ namespace WoodWebAPI.Worker.Controller.Commands
 
             if (!cancellationToken.IsCancellationRequested)
             {
+                var messageId = 0;
+                
+                if (update.Type == UpdateType.CallbackQuery)
+                {
+                    messageId = update.CallbackQuery.Message.MessageId;
+                }
+                else if (update.Type == UpdateType.Message)
+                {
+                    messageId = update.Message.MessageId;
+                }
+
                 var chatId = update.CallbackQuery.From.Id;
                 //await Client.SendTextMessageAsync(
                 //    chatId: chatId,
@@ -45,7 +57,7 @@ namespace WoodWebAPI.Worker.Controller.Commands
 
                     //var contentUser = JsonContent.Create(registerModel);
 
-                    var resultCustomer = await httpClient.PostAsync("http://localhost:5550/api/Customer/CreateCustomers", contentCustomer);
+                    var resultCustomer = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Customer/CreateCustomers", contentCustomer);
                     //var resultUser = await httpClient.PostAsJsonAsync("http://localhost:5550/api/Authenticate/register", contentUser);
 
                     if (resultCustomer.IsSuccessStatusCode) //&& resultUser.IsSuccessStatusCode)
@@ -65,68 +77,29 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                 callbackData: "/login")                              
                         });
                         
-                        await Client.SendTextMessageAsync(
+                        await Client.EditMessageTextAsync(
                             chatId: chatId, 
                             text: "Поздравляем с регистарцией!"
                             +"\nПосле регистрации Вам необходимо войти", 
-                            replyMarkup: inlineMarkup);
+                            messageId: messageId,
+                            replyMarkup: inlineMarkup,
+                            cancellationToken: cancellationToken
+                            );
             
                     }
                     else
                     {
-                        await Client.SendTextMessageAsync(chatId, "ОШИБКА В РЕГИСТРАЦИИ");
+                        await Client.EditMessageTextAsync(
+                            chatId: chatId,
+                            text: "ОШИБКА В РЕГИСТРАЦИИ",
+                            replyMarkup: new InlineKeyboardMarkup(
+                                inlineKeyboardButton: InlineKeyboardButton.WithCallbackData("В начало","/start")),
+                            messageId: messageId,
+                            cancellationToken: cancellationToken
+                            );
                     }
                 }
             }
         }
-
-        //public SignUpCommand(CommandExecutor executor)
-        //{
-        //    Executor = executor;
-        //}
-
-        //public async Task GetUpdate(Update update,CancellationToken cancellationToken)
-        //{
-        //    long chatId = update.Message.Chat.Id;
-        //    if (update.Message.Text == null) //Проверочка
-        //        return;
-
-        //    if (_password == null) //Получаем пароль пользователя
-        //    {
-        //        _password = update.Message.Text;
-
-        //        using (HttpClient httpClient = new HttpClient())
-        //        {
-        //            CreateCustomerDTO customerDTO = new CreateCustomerDTO()
-        //            {
-        //                Name = new string((update.CallbackQuery.From.FirstName ?? "anonymous") + (" " + update.CallbackQuery.From.LastName ?? $" {Guid.NewGuid()}")),
-        //                TelegtamId = chatId.ToString(),
-        //            };
-
-        //            var contentCustomer = JsonContent.Create(customerDTO);
-
-        //            RegisterModel registerModel = new RegisterModel()
-        //            {
-        //                TelegramID = chatId.ToString(),
-        //                Password = _password,
-        //            };
-
-        //            var contentUser = JsonContent.Create(registerModel);
-
-        //            var resultCustomer = await httpClient.PostAsJsonAsync("http://localhost:5550/api/Customer/CreateCustomers", contentCustomer);
-        //            var resultUser = await httpClient.PostAsJsonAsync("http://localhost:5550/api/Authenticate/register", contentUser);
-
-        //            if (resultCustomer.IsSuccessStatusCode && resultUser.IsSuccessStatusCode)
-        //            {
-        //                await Client.SendTextMessageAsync(chatId, "Поздравляем с регистарцией!");
-        //            }
-        //            else
-        //            {
-        //                await Client.SendTextMessageAsync(chatId, "ОШИБКА В РЕГИСТРАЦИИ");
-        //            }
-
-        //        }
-        //    }
-        //}
     }
 }

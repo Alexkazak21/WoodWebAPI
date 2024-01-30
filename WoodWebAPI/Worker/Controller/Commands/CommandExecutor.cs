@@ -36,9 +36,16 @@ public class CommandExecutor : IUpdateHandler
         }
         else if (update.Message != null && update.CallbackQuery != null) // ожидаем сообщение к которому привязан текст через CallbackQuery
         {
-            CallbackQuery query = update.CallbackQuery;
+            CallbackQuery query = new CallbackQuery();
+            query.Data = update.CallbackQuery.Data;
+
             if (query.Data == null) //такое бывает, во избежании ошибок делаем проверку
                 return;
+
+            if (query.Data.IndexOf(':') > 0)
+            {
+                query.Data = query.Data.Split(':')[0];
+            }
 
             foreach (var command in commands)
             {
@@ -82,8 +89,11 @@ public class CommandExecutor : IUpdateHandler
             new SignUpCommand(),
             new LoginCommand(),
             new MainCommand(),
-            new NewOrderCommand(),
+            new AddOrderCommand(),
             new DeleteOrderCommand(),
+            new ShowOrderCommand(),
+            new AddTimberCommand(),
+            new ClearCommand(),
         };
     }
 }
