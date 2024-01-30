@@ -103,12 +103,11 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                                         {
                                                             new[]
                                                             {
-                                                                InlineKeyboardButton.WithCallbackData("Добавить бревно",$"/add_timber:{order.Id}")
-                                                                
+                                                                InlineKeyboardButton.WithCallbackData("Добавить бревно",$"/add_timber:{order.Id}")                                                                
                                                             },
                                                             new[]
                                                             {
-                                                                InlineKeyboardButton.WithCallbackData("Изменить описание бревна","/alter_timber")
+                                                                InlineKeyboardButton.WithCallbackData("Изменить описание брёвен",$"/alter_timber:{orderId}")
                                                             },
                                                             new[]
                                                             {

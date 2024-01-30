@@ -1,7 +1,7 @@
-﻿using System.Threading;
-using Telegram.Bot;
+﻿using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
+using WoodWebAPI.Data.Entities;
 
 namespace WoodWebAPI.Worker
 {
@@ -20,17 +20,8 @@ namespace WoodWebAPI.Worker
             {
                 long chatId = update.Message.Chat.Id;
 
-                if (update.Message.ReplyToMessage != null && update.Message.ReplyToMessage.Text.StartsWith("Введите длину и диаметр бревна по верхушке"))
-                {
-                    var textParams = update.Message.Text.Split(':');
-                    var orderId = int.Parse(update.Message.ReplyToMessage.Text.Split('-', StringSplitOptions.TrimEntries)[^1]);
-                    var diametr = textParams[0];
-                    var length = textParams[1];
-                    update.CallbackQuery = new CallbackQuery()
-                    {
-                        Data = $"/add_timber:{orderId}:{diametr}:{length}",
-                    };
-                }
+                CheckInnerMessageText(update);
+
                 await SendUpdate(chatId, botClient, update, cancellationToken);
             }
             else if(update.CallbackQuery != null)
@@ -54,5 +45,28 @@ namespace WoodWebAPI.Worker
 
             await listener.HandleUpdateAsync(botClient, update, cancellationToken);
         }
+
+        private void CheckInnerMessageText(Update update)
+        {
+            if (update.Message.ReplyToMessage != null && update.Message.ReplyToMessage.Text.StartsWith("Введите длину и диаметр бревна по верхушке"))
+            {
+                var textParams = update.Message.Text.Split(':');
+                var orderId = int.Parse(update.Message.ReplyToMessage.Text.Split('-', StringSplitOptions.TrimEntries)[^1]);
+                var diametr = textParams[0];
+                var length = textParams[1];
+                update.CallbackQuery = new CallbackQuery()
+                {
+                    Data = $"/add_timber:{orderId}:{diametr}:{length}",
+                };
+            }
+            else if (update.Message.ReplyToMessage != null && update.Message.ReplyToMessage.Text.StartsWith("Введите пароль ОТВЕТОМ на это сообщение"))
+            {
+                var textParams = update.Message.Text;
+                update.CallbackQuery = new CallbackQuery()
+                {
+                    Data = $"/reg_admin:{textParams}",
+                };
+            }
+        }
     }
-}
+}   

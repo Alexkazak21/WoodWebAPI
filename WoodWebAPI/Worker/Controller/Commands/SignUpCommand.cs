@@ -8,7 +8,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace WoodWebAPI.Worker.Controller.Commands
 {
-    public class SignUpCommand : ICommand, IListener
+    public class SignUpCommand : ICommand
     {
         public TelegramBotClient Client => TelegramWorker.API;
 

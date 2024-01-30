@@ -69,6 +69,7 @@ public class AddTimberCommand : ICommand
                                 "\nОтправьте как ОТВЕТ на это сообщение" +
                                 $"\nЗаказ - {orderId}",
                                 messageId: messageId,
+                                replyMarkup: null,
                                 cancellationToken: cancellationToken);
                 }
 

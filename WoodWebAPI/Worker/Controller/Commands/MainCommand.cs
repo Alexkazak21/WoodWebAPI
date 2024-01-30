@@ -120,10 +120,9 @@ public class MainCommand : ICommand
                             }
                             else
                             {
-                                await Client.EditMessageTextAsync(
+                                await Client.SendTextMessageAsync(
                                                                 chatId: chatid,
                                                                 text: "Выберите заказ",
-                                                                messageId: update.Message.MessageId,
                                                                 replyMarkup: keyboard,
                                                                 cancellationToken: cancellationToken);
                             }                            

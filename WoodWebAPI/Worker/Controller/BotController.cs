@@ -30,9 +30,8 @@ namespace WoodWebAPI.Worker.Controller
                 await _distributor.HandleUpdateAsync(_bot, update, cancellationToken);
             }
             return;
-
-            //await _bot.SendTextMessageAsync(update.Message.Chat.Id, "hello");
         }
+
         [HttpGet]
         public string Get()
         {

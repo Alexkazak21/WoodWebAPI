@@ -14,7 +14,7 @@ public class CommandExecutor : IUpdateHandler
 
     public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
-        if(update.Message != null && update.CallbackQuery == null) // ожидается получнени только сообщения
+        if(update.Message != null && update.CallbackQuery == null) // ожидается получнение только сообщения
         {
             Message msg = update.Message;
             if (msg.Text == null) //такое бывает, во избежании ошибок делаем проверку
@@ -94,6 +94,8 @@ public class CommandExecutor : IUpdateHandler
             new ShowOrderCommand(),
             new AddTimberCommand(),
             new ClearCommand(),
+            new AlterTimberCommand(),
+            new RegAdminCommand(),
         };
     }
 }

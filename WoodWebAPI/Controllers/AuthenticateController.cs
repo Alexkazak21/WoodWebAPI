@@ -74,7 +74,7 @@ namespace WoodWebAPI.Controllers
             if (!result.Succeeded)
                 return StatusCode(StatusCodes.Status500InternalServerError, new Response { Status = "Error", Message = "User creation failed! Please check user details and try again." });
 
-            return Ok(new Response { Status = "Success", Message = "User created successfully!" });
+            return Ok(new Response { Status = "Success", Message = "Пользователь успешно создан!" });
         }
 
         [HttpPost]
@@ -107,7 +107,7 @@ namespace WoodWebAPI.Controllers
             {
                 await _userManager.AddToRoleAsync(user, UserRoles.User);
             }
-            return Ok(new Response { Status = "Success", Message = "User created successfully!" });
+            return Ok(new Response { Status = "Success", Message = "Пользователь успешно создан!" });
         }
 
         private JwtSecurityToken GetToken(List<Claim> authClaims)
