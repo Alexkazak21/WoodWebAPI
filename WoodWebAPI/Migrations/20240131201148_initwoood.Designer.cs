@@ -12,15 +12,15 @@ using WoodWebAPI.Data;
 namespace WoodWebAPI.Migrations
 {
     [DbContext(typeof(WoodDBContext))]
-    [Migration("20231212124756_Initial")]
-    partial class Initial
+    [Migration("20240131201148_initwoood")]
+    partial class initwoood
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "8.0.1")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -41,9 +41,40 @@ namespace WoodWebAPI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("CustomerId");
 
                     b.ToTable("Customers");
+                });
+
+            modelBuilder.Entity("WoodWebAPI.Data.Entities.IsAdmin", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AdminRole")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TelegramId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TelegramUsername")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("IsAdmin");
                 });
 
             modelBuilder.Entity("WoodWebAPI.Data.Entities.Kubs", b =>
@@ -65,7 +96,7 @@ namespace WoodWebAPI.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Kubss");
+                    b.ToTable("Kubs");
                 });
 
             modelBuilder.Entity("WoodWebAPI.Data.Entities.Order", b =>

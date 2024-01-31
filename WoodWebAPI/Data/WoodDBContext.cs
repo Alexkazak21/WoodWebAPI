@@ -9,10 +9,7 @@ namespace WoodWebAPI.Data;
 public partial class WoodDBContext : DbContext
 {
     public WoodDBContext(DbContextOptions<WoodDBContext> options) : base(options)
-    {
-        //Database.EnsureDeletedAsync();
-       //Database.EnsureCreatedAsync();
-    }
+    { }
 
     public virtual DbSet<Customer> Customers { get; set; }
 
@@ -21,6 +18,8 @@ public partial class WoodDBContext : DbContext
     public virtual DbSet<Timber> Timbers { get; set; }
 
     public virtual DbSet<Kubs> Kubs { get; set; }
+
+    public virtual DbSet<IsAdmin> IsAdmin { get; set; }
 
     
 

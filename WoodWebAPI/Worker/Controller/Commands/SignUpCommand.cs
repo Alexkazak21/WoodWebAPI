@@ -14,9 +14,7 @@ namespace WoodWebAPI.Worker.Controller.Commands
 
         public CommandExecutor Executor { get; }
 
-        public string Name => "signUp";
-
-        private string? _password = null;
+        public string Name => "/signUp";
 
         public async Task Execute(Update update, CancellationToken cancellationToken)
         {
@@ -35,9 +33,6 @@ namespace WoodWebAPI.Worker.Controller.Commands
                 }
 
                 var chatId = update.CallbackQuery.From.Id;
-                //await Client.SendTextMessageAsync(
-                //    chatId: chatId,
-                //    text :"Введите пароль! ( Ответом на это сообщение)");
 
                 using (HttpClient httpClient = new HttpClient())
                 {
@@ -45,17 +40,10 @@ namespace WoodWebAPI.Worker.Controller.Commands
                     {
                         Name = new string((update.CallbackQuery.From.FirstName ?? "anonymous") + (" " + update.CallbackQuery.From.LastName ?? $" {Guid.NewGuid()}")),
                         TelegtamId = chatId.ToString(),
+                        Username = update.CallbackQuery.From.Username ?? $" {Guid.NewGuid()}",
                     };
 
                     var contentCustomer = JsonContent.Create(customerDTO);
-
-                    //RegisterModel registerModel = new RegisterModel()
-                    //{
-                    //    TelegramID = chatId.ToString(),
-                    //    Password = _password,
-                    //};
-
-                    //var contentUser = JsonContent.Create(registerModel);
 
                     var resultCustomer = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Customer/CreateCustomers", contentCustomer);
                     //var resultUser = await httpClient.PostAsJsonAsync("http://localhost:5550/api/Authenticate/register", contentUser);
@@ -69,18 +57,18 @@ namespace WoodWebAPI.Worker.Controller.Commands
                         var inlineMarkup = new InlineKeyboardMarkup(new[] 
                         { 
                             InlineKeyboardButton.WithWebApp(
-                                text: "Продолжить в приложении",
+                                text: "О нас",
                                 webAppInfo),
 
                             InlineKeyboardButton.WithCallbackData(
                                 text: "Продолжить в боте",
-                                callbackData: "/login")                              
+                                callbackData: "/main")                              
                         });
                         
                         await Client.EditMessageTextAsync(
                             chatId: chatId, 
                             text: "Поздравляем с регистарцией!"
-                            +"\nПосле регистрации Вам необходимо войти", 
+                            +"\nПосле регистрации Выберите действие", 
                             messageId: messageId,
                             replyMarkup: inlineMarkup,
                             cancellationToken: cancellationToken

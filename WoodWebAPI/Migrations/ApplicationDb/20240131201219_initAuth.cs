@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace WoodWebAPI.Migrations.ApplicationDb
 {
     /// <inheritdoc />
-    public partial class Identity : Migration
+    public partial class initAuth : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

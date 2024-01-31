@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-
-namespace WoodWebAPI.Data.Entities;
+﻿namespace WoodWebAPI.Data.Entities;
 
 public partial class Timber
 {

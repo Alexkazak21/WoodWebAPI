@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace WoodWebAPI.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class initwoood : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -18,7 +18,8 @@ namespace WoodWebAPI.Migrations
                     CustomerId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    TelegramID = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    TelegramID = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Username = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -26,7 +27,23 @@ namespace WoodWebAPI.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Kubss",
+                name: "IsAdmin",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TelegramUsername = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TelegramId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    AdminRole = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_IsAdmin", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Kubs",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -37,7 +54,7 @@ namespace WoodWebAPI.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Kubss", x => x.Id);
+                    table.PrimaryKey("PK_Kubs", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -100,7 +117,10 @@ namespace WoodWebAPI.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Kubss");
+                name: "IsAdmin");
+
+            migrationBuilder.DropTable(
+                name: "Kubs");
 
             migrationBuilder.DropTable(
                 name: "Timbers");

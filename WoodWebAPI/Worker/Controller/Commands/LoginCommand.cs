@@ -1,7 +1,7 @@
 ﻿using Telegram.Bot;
 using Telegram.Bot.Types;
-using Telegram.Bot.Types.ReplyMarkups;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
@@ -17,16 +17,16 @@ public class LoginCommand : ICommand
 
         webAppInfo.Url = "https://woodcutters.mydurable.com/";
 
-        var inlineMarkup = new InlineKeyboardMarkup(new[]
-        {
-           InlineKeyboardButton.WithWebApp(
+           var inlineMarkup = new InlineKeyboardMarkup(new[]
+           {
+                InlineKeyboardButton.WithWebApp(
                                 text: "О нас",
                                 webAppInfo),
 
-           InlineKeyboardButton.WithCallbackData(
+                InlineKeyboardButton.WithCallbackData(
                                 text: "Продолжить в боте",
                                 callbackData: "/main"),
-        });
+           });
 
 
         if (update.Type == UpdateType.CallbackQuery)
@@ -44,6 +44,6 @@ public class LoginCommand : ICommand
             text: "Выберите вариант",
             replyMarkup: inlineMarkup); ;
         }
-        
+
     }
 }

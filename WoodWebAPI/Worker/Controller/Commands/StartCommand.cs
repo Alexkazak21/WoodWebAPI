@@ -22,16 +22,16 @@ public class StartCommand : ICommand
 
             if (update.Type == UpdateType.Message)
             {
-                chatId = update.Message.Chat.Id;
-                var userName = update.Message.From.FirstName;
-                await SendButtonsAsync(update, chatId, userName: userName);
+                chatId = update.Message.From.Id;
+                var userFirstName = update.Message.From.FirstName;
+                await SendButtonsAsync(chatId, userFirstName: userFirstName);
             }
             else if (update.Type == UpdateType.CallbackQuery)
             {
                 chatId = update.CallbackQuery.From.Id;
                 messageId = update.CallbackQuery.Message.MessageId;
-                var userName = update.CallbackQuery.From.FirstName;
-                await SendButtonsAsync(update, chatId, messageId, userName);
+                var userFirstName = update.CallbackQuery.From.FirstName;
+                await SendButtonsAsync(chatId, messageId, userFirstName);
             }
         }
         else
@@ -40,7 +40,7 @@ public class StartCommand : ICommand
         }
     }
 
-    private async Task SendButtonsAsync(Update update, long chatId, int messageId = -1, string userName = null, CancellationToken cancellationToken = default)
+    private async Task SendButtonsAsync(long chatId, int messageId = -1, string userFirstName = null, CancellationToken cancellationToken = default)
     {
         var userExist = false;
         using (HttpClient client = new HttpClient())
@@ -91,7 +91,7 @@ public class StartCommand : ICommand
             {
                 await Client.SendTextMessageAsync(
                 chatId: chatId,
-                    text: $"Привет! {userName}" +
+                    text: $"Привет! {userFirstName}" +
                     "\nДля продолжения, войдите в систему",
                     replyMarkup: keyboardUserExist,
                     cancellationToken: cancellationToken);
@@ -100,7 +100,7 @@ public class StartCommand : ICommand
             {
                 await Client.SendTextMessageAsync(
                     chatId: chatId,
-                    text: $"Привет! {userName}" +
+                    text: $"Привет! {userFirstName}" +
                     "\nДля продолжения, зарегистрируйтесь",
                     replyMarkup: keyboardUserNotExist,
                     cancellationToken: cancellationToken);
@@ -112,7 +112,7 @@ public class StartCommand : ICommand
             {
                 await Client.EditMessageTextAsync(
                 chatId: chatId,
-                    text: $"Привет! {userName}" +
+                    text: $"Привет! {userFirstName}" +
                     "\nДля продолжения, войдите в систему",
                     messageId: messageId,
                     replyMarkup: keyboardUserExist,
@@ -122,7 +122,7 @@ public class StartCommand : ICommand
             {
                 await Client.EditMessageTextAsync(
                     chatId: chatId,
-                    text: $"Привет! {userName}" +
+                    text: $"Привет! {userFirstName}" +
                     "\nДля продолжения, зарегистрируйтесь",
                     messageId: messageId,
                     replyMarkup: keyboardUserNotExist,

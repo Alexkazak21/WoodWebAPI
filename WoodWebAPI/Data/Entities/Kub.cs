@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace WoodWebAPI.Data.Entities;
+﻿namespace WoodWebAPI.Data.Entities;
 
 public partial class Kubs
 {

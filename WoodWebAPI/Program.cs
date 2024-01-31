@@ -105,13 +105,17 @@ namespace WoodWebAPI
             builder.Services.AddScoped<IOrderManage, OrderManageService>();
             builder.Services.AddScoped<ITimberManage, TimberManageService>();
 
-
+            var workingCreds = new TelegtamWorkerCreds(
+                configuration.GetValue<string>("TelegramToken") ?? throw new ArgumentNullException("TelegramToken", "Telegtam Token field must be specified"),
+                configuration.GetSection("ngrok").GetValue<string>("URL") ?? throw new ArgumentNullException("NGROK URL", " NGROK URL must be specified"),
+                configuration.GetSection("profiles").GetSection("http").GetValue<string>("applicationUrl") ?? throw new ArgumentNullException("BaseUrl", "BaseUrl field must be specified"),
+                configuration.GetSection("admin").GetValue<string>("Username") ?? throw new ArgumentNullException("Username", "Username must be declared"),
+                configuration.GetSection("admin").GetValue<string>("TelegramId") ?? throw new ArgumentException("TelegramId", "TelegramId must be declared")
+                );
             // Adding Background service worker to work with Telegram
             builder.Services.AddHostedService(options => new TelegramWorker(
                 options.GetRequiredService<ILogger<TelegramWorker>>(),
-                configuration.GetValue<string>("TelegramToken") ?? throw new ArgumentNullException("TelegramToken", "Telegtam Token field must be specified"),
-                configuration.GetSection("ngrok").GetValue<string>("URL") ?? throw new ArgumentNullException("NGROK URL", " NGROK URL must be specified"),
-                configuration.GetSection("profiles").GetSection("http").GetValue<string>("applicationUrl") ?? throw new ArgumentNullException("BaseUrl", "BaseUrl field must be specified")
+                workingCreds
                 ));
 
 

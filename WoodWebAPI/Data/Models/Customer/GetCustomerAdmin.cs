@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace WoodWebAPI.Data.Models.Customer;
+﻿namespace WoodWebAPI.Data.Models.Customer;
 
 public class GetCustomerAdmin
 {

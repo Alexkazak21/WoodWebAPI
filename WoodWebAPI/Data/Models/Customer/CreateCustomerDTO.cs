@@ -4,8 +4,10 @@ namespace WoodWebAPI.Data.Models.Customer;
 
 public class CreateCustomerDTO
 {
-    [Required(ErrorMessage = "TelegramId is nessesery ")]
+    [Required(ErrorMessage = "TelegramId is nessesery")]
     public string TelegtamId { get; set; }
 
+    [Required(ErrorMessage = "Username is nessesery")]
+    public string Username { get; set; }
     public string Name { get; set; }
 }

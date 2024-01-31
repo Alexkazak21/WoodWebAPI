@@ -21,8 +21,8 @@ namespace WoodWebAPI.Services
                 {
                     TelegramID = model.TelegtamId,
                     Name = model.Name,
-                }
-                );
+                    Username = model.Username,
+                });
 
             if(_db.SaveChangesAsync().Result > 0) 
             {
@@ -112,7 +112,8 @@ namespace WoodWebAPI.Services
                 {
                     TelegramId = item.TelegramID,
                     Name = item.Name,
-                    Orders = item.Orders
+                    Orders = item.Orders,
+                    Username = item.Username,                    
                 });
             }
 
