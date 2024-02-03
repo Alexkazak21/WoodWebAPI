@@ -35,7 +35,7 @@ public class MainCommand : ICommand
 
                     messageId = update.Message.MessageId;
 
-                    if (TelegramWorker.AdminList.Find(x => x.TelegramId == chatid.ToString()) != null) { isAdmin = true; }
+                    if (TelegramWorker.AdminList.Find(x => x.TelegramId == chatid.ToString() && x.AdminRole == 1) != null) { isAdmin = true; }
 
                     userExist = await new CommonChecks().CheckCustomer(chatid, cancellationToken);
                 }
@@ -45,7 +45,7 @@ public class MainCommand : ICommand
 
                     messageId = update.CallbackQuery.Message.MessageId;
 
-                    if (TelegramWorker.AdminList.Find(x => x.TelegramId == chatid.ToString()) != null) { isAdmin = true; }
+                    if (TelegramWorker.AdminList.Find(x => x.TelegramId == chatid.ToString() && x.AdminRole == 1) != null) { isAdmin = true; }
 
                     userExist = await new CommonChecks().CheckCustomer(chatid, cancellationToken);
 
@@ -217,11 +217,15 @@ public class MainCommand : ICommand
                         }
                     };
 
-                    await Client.SetMyCommandsAsync(commands, BotCommandScope.Chat(chatid));
+                    await Client.SetMyCommandsAsync(commands, BotCommandScope.Chat(chatid));                  
 
                     InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup(                            
                             new[]
                             {
+                                new[]
+                                {
+                                    InlineKeyboardButton.WithCallbackData("Управление администраторами", "/admin_manage"),
+                                },
                                 new[]
                                 {
                                     InlineKeyboardButton.WithCallbackData("Управление заказами", "/order_manage"),
@@ -233,9 +237,9 @@ public class MainCommand : ICommand
                             });
                     if (update.Type == UpdateType.CallbackQuery)
                     {
-                        await Client.EditMessageTextAsync(
+                         await Client.EditMessageTextAsync(
                                             chatId: chatid,
-                                            text: "Выберите операцию",
+                                            text: "\nВы Администратор\nВыберите операцию",
                                             messageId: update.CallbackQuery.Message.MessageId,
                                             replyMarkup: keyboard,
                                             cancellationToken: cancellationToken);

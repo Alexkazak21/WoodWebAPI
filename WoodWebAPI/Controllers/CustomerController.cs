@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using WoodWebAPI.Auth;
+using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Customer;
 using WoodWebAPI.Services;
 
@@ -80,6 +81,31 @@ namespace WoodWebAPI.Controllers
             if (!result.Success)
             {
                 return BadRequest(result.Message);
+            }
+
+            return Ok(result);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AddAdmin(GetAdminDTO model)
+        {
+            var result = await _entityService.AddAdminAsync(model);
+
+            if ( !result.Success )
+            {
+                return BadRequest(result.Message);
+            }
+
+            return Ok(result.Message);
+        }
+        [HttpGet]
+        public async Task<IActionResult> GetAdminList()
+        {
+            var result = await _entityService.GetAdminListAsync();
+
+            if(result == null)
+            {
+                return BadRequest("Admin List is empty");
             }
 
             return Ok(result);

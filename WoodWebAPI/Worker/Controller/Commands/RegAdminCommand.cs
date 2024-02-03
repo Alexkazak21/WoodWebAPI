@@ -14,10 +14,10 @@ namespace WoodWebAPI.Worker.Controller.Commands
 
         public async Task Execute(Update update, CancellationToken cancellationToken)
         {
-            if(cancellationToken.IsCancellationRequested) return;
+            if (cancellationToken.IsCancellationRequested) return;
 
             long? chatId = null;
-            
+
             if (update != null)
             {
                 if (update.Type == Telegram.Bot.Types.Enums.UpdateType.Message)
@@ -33,24 +33,23 @@ namespace WoodWebAPI.Worker.Controller.Commands
 
                 if (comandParts.Length > 1)
                 {
-                    var pass = comandParts[1];
                     using HttpClient httpClient = new HttpClient();
                     var registerAdminCred = new RegisterModel()
-                                                {
-                                                    Password = pass,
-                                                    TelegramID = chatId.ToString(),
-                                                };
+                    {
+                        TelegramID = chatId.ToString(),
+                    };
 
                     var content = JsonContent.Create(registerAdminCred);
-                    var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Authenticate/register-admin", content);
-                    var response = JsonConvert.DeserializeObject<Response>( await request.Content.ReadAsStringAsync());
+                    var requestAuth = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Authenticate/register-admin", content);
+                    var responseAuth = JsonConvert.DeserializeObject<Response>(await requestAuth.Content.ReadAsStringAsync());
                     
-                    if(response.Status == "Success")
-                    {
 
+                    if (responseAuth.Status == "Success")
+                    {
+                        
                         await Client.SendTextMessageAsync(
                                 chatId: chatId,
-                                text: $"{response.Message}",
+                                text: $"{responseAuth.Message}",
                                 replyMarkup: new InlineKeyboardMarkup(
                                     inlineKeyboardButton: InlineKeyboardButton.WithCallbackData("Главное меню", "/main")),
                                 cancellationToken: cancellationToken);
@@ -59,18 +58,17 @@ namespace WoodWebAPI.Worker.Controller.Commands
                     {
                         await Client.SendTextMessageAsync(
                             chatId: chatId,
-                            text: $"{response.Message}",
+                            text: $"{responseAuth.Message}",
+                            replyMarkup: new InlineKeyboardMarkup(
+                                    inlineKeyboardButton: InlineKeyboardButton.WithCallbackData("Главное меню", "/main")),
                             cancellationToken: cancellationToken);
                     }
                 }
                 else
                 {
-                    await Client.SendTextMessageAsync(
-                        chatId: chatId,
-                        text: "Введите пароль ОТВЕТОМ на это сообщение",                       
-                        cancellationToken: cancellationToken);
+
                 }
-            }         
+            }
 
         }
     }

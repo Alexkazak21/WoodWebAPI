@@ -31,7 +31,7 @@ namespace WoodWebAPI.Controllers
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
             var user = await _userManager.FindByNameAsync(model.TelegramId);
-            if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
+            if (user != null)
             {
                 var userRoles = await _userManager.GetRolesAsync(user);
 
@@ -70,7 +70,7 @@ namespace WoodWebAPI.Controllers
                 SecurityStamp = Guid.NewGuid().ToString(),
                 Id = model.TelegramID,
             };
-            var result = await _userManager.CreateAsync(user, model.Password);
+            var result = await _userManager.CreateAsync(user);
             if (!result.Succeeded)
                 return StatusCode(StatusCodes.Status500InternalServerError, new Response { Status = "Error", Message = "User creation failed! Please check user details and try again." });
 
@@ -90,7 +90,7 @@ namespace WoodWebAPI.Controllers
                 SecurityStamp = Guid.NewGuid().ToString(),
                 UserName = model.TelegramID
             };
-            var result = await _userManager.CreateAsync(user, model.Password);
+            var result = await _userManager.CreateAsync(user);
             if (!result.Succeeded)
                 return StatusCode(StatusCodes.Status500InternalServerError, new Response { Status = "Error", Message = "User creation failed! Please check user details and try again." });
 

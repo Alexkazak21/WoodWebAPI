@@ -31,7 +31,7 @@ public class OrderManageCommand : ICommand
                 messageid = update.CallbackQuery.Message.MessageId;
             }
 
-            if(commandParts.Length > 1) 
+            if(commandParts != null && commandParts.Length > 1) 
             {
                 if (commandParts[1] == "all")
                 {

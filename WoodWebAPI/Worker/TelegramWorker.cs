@@ -17,7 +17,7 @@ public class TelegramWorker : BackgroundService
     public static TelegramBotClient? API { get; set; }
     public static ILogger<TelegramWorker>? Logger { get; set; }
 
-    public static readonly List<IsAdmin> AdminList = new List<IsAdmin>();
+    public static List<IsAdmin> AdminList = new List<IsAdmin>();
 
     public TelegramWorker(ILogger<TelegramWorker> logger, TelegtamWorkerCreds workerCreds)
     {

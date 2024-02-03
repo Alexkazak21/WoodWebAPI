@@ -97,6 +97,7 @@ public class CommandExecutor : IUpdateHandler
             new AlterTimberCommand(),
             new RegAdminCommand(),
             new OrderManageCommand(),
+            new AdminManageCommand(),
         };
     }
 }

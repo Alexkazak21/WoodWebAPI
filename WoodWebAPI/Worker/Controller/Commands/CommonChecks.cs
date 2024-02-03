@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Customer;
 using WoodWebAPI.Data.Models.Order;
 
@@ -22,6 +23,20 @@ public class CommonChecks
         }
     }
 
+    public async Task<GetAdminDTO[]?> GetAdmin()
+    {
+        using (HttpClient httpClient = new HttpClient())
+        {
+            var request = await httpClient.GetAsync($"{TelegramWorker.BaseUrl}/api/Customer/GetAdminList");
+            var responce = await request.Content.ReadAsStringAsync();
+            if(request.IsSuccessStatusCode)
+            {
+                return JsonConvert.DeserializeObject<GetAdminDTO[]?>(responce);
+            }
+
+            return new[] { new GetAdminDTO() };
+        };
+    }
     public async Task<bool> CheckCustomer(long chatid, CancellationToken cancellationToken)
     {
         if (!cancellationToken.IsCancellationRequested)

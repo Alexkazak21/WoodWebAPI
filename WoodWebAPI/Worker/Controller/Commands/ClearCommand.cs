@@ -38,7 +38,7 @@ namespace WoodWebAPI.Worker.Controller.Commands
                         {
                             var currentMessage = update.CallbackQuery.Message.MessageId;
                             for (int i = 0; i < 1001; i++)
-                            {
+                            { 
                                 await Client.DeleteMessageAsync(
                                     chatId: chatId,
                                     messageId: currentMessage - i);

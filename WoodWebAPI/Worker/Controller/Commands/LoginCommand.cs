@@ -2,6 +2,7 @@
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using WoodWebAPI.Data.Entities;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
@@ -17,8 +18,8 @@ public class LoginCommand : ICommand
 
         webAppInfo.Url = "https://woodcutters.mydurable.com/";
 
-           var inlineMarkup = new InlineKeyboardMarkup(new[]
-           {
+        var inlineMarkup = new InlineKeyboardMarkup(new[]
+        {
                 InlineKeyboardButton.WithWebApp(
                                 text: "О нас",
                                 webAppInfo),
@@ -28,6 +29,33 @@ public class LoginCommand : ICommand
                                 callbackData: "/main"),
            });
 
+
+        var adminsList = await new CommonChecks().GetAdmin();
+
+        if (adminsList != null)
+        {
+            for (int i = 0; i < adminsList.Length; i++)
+            {
+                if (!TelegramWorker.AdminList.Contains(new IsAdmin
+                {
+                    AdminRole = adminsList[i].AdminRole,
+                    CreatedAt = adminsList[i].CreatedAt,
+                    TelegramId = adminsList[i].TelegramId,
+                    TelegramUsername = adminsList[i].TelegramUsername,
+                    Id = adminsList[i].Id,
+                }))
+                {
+                    TelegramWorker.AdminList.Add(new IsAdmin
+                    {
+                        AdminRole = adminsList[i].AdminRole,
+                        CreatedAt = adminsList[i].CreatedAt,
+                        TelegramId = adminsList[i].TelegramId,
+                        TelegramUsername = adminsList[i].TelegramUsername,
+                        Id = adminsList[i].Id,
+                    });
+                }                
+            }
+        }
 
         if (update.Type == UpdateType.CallbackQuery)
         {

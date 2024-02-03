@@ -3,6 +3,7 @@ using WoodWebAPI.Data;
 using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Entities;
 using WoodWebAPI.Data.Models.Customer;
+using Microsoft.AspNetCore.Mvc;
 
 namespace WoodWebAPI.Services
 {
@@ -85,7 +86,7 @@ namespace WoodWebAPI.Services
             {
                 customersArray.Add(new GetCustomerAdmin()
                 {
-                    CustonerId = item.CustomerId,
+                    CustomerId = item.CustomerId,
                     CustomerName = item.Name,
                     ChatID = item.TelegramID,
                 });
@@ -120,6 +121,34 @@ namespace WoodWebAPI.Services
             return customersArray.ToArray();
         }
 
+        public async Task<GetAdminDTO[]?> GetAdminListAsync()
+        {
+            var adminsArray = new List<GetAdminDTO>();
+
+            var data = await _db.IsAdmin.CountAsync();
+
+            if (data == 0)
+            {
+                return null;
+            }
+
+            var result = await _db.IsAdmin.ToArrayAsync();
+
+            foreach (var item in result)
+            {
+                adminsArray.Add(new GetAdminDTO()
+                     {
+                        TelegramId = item.TelegramId,
+                        AdminRole = item.AdminRole,
+                        CreatedAt = item.CreatedAt,
+                        Id = item.Id,
+                        TelegramUsername = item.TelegramUsername
+                     });
+            }
+
+            return adminsArray.ToArray();
+        }
+
         public async Task<ExecResultModel> UpdateAsync(UpdateCustomerDTO model)
         {
             try
@@ -147,6 +176,50 @@ namespace WoodWebAPI.Services
 
             }
             catch (Exception ex) 
+            {
+                return new ExecResultModel
+                {
+                    Success = false,
+                    Message = ex.Message,
+                };
+            }
+        }
+
+        public async Task<ExecResultModel> AddAdminAsync(GetAdminDTO model)
+        {
+            try
+            {
+                var customer = await _db.IsAdmin.Where(x => x.TelegramId == model.TelegramId).FirstOrDefaultAsync();
+
+                if (customer != null)
+                {
+                    return new ExecResultModel
+                    {
+                        Success = false,
+                        Message = "Администратор уже существует",
+                    };                   
+                }
+
+                await _db.IsAdmin.AddAsync(
+                    new IsAdmin 
+                    {
+                        Id = model.Id,
+                        CreatedAt = DateTime.Now,
+                        AdminRole = model.AdminRole,
+                        TelegramId = model.TelegramId,
+                        TelegramUsername = model.TelegramUsername,
+                    });
+
+                await _db.SaveChangesAsync();
+
+                return new ExecResultModel
+                {
+                    Success = true,
+                    Message = "Администратор успешно добавлен",
+                };
+
+            }
+            catch (Exception ex)
             {
                 return new ExecResultModel
                 {
