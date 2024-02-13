@@ -62,6 +62,19 @@ public class AdminManageCommand : ICommand
                                 replyMarkup: replymarkup,
                                 cancellationToken: cancellationToken);
                         }
+                        else if (availableToAddAdmins.Count == 0)
+                        {
+                            await Client.EditMessageTextAsync(
+                                chatId: chatId,
+                                messageId: messageId,
+                                text: "Нет пользователей для добавления",
+                                replyMarkup: new InlineKeyboardMarkup(
+                                   [
+                                       InlineKeyboardButton.WithCallbackData("На главную","/main")
+                                    ]),
+                                  
+                                cancellationToken: cancellationToken);
+                        }
                     }
                     else if ( commandParts[2] != null )
                     {

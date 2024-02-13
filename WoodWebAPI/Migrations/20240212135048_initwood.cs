@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace WoodWebAPI.Migrations
 {
     /// <inheritdoc />
-    public partial class initwoood : Migration
+    public partial class initwood : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

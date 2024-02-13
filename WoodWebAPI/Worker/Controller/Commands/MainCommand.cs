@@ -248,7 +248,7 @@ public class MainCommand : ICommand
                     {
                         await Client.SendTextMessageAsync(
                                                         chatId: chatid,
-                                                        text: "Выберите заказ",
+                                                        text: "\nВы Администратор\nВыберите операцию",
                                                         replyMarkup: keyboard,
                                                         cancellationToken: cancellationToken);
                     }

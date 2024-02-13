@@ -1,4 +1,5 @@
-﻿using Telegram.Bot;
+﻿using System.Reflection;
+using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 
@@ -82,8 +83,15 @@ public class CommandExecutor : IUpdateHandler
 
     public CommandExecutor()
     {
-        commands =  new List<ICommand>()
+        //var type = AppDomain.CurrentDomain.GetAssemblies()
+        //    .SelectMany(x => x.GetTypes())
+        //    .Where(x => x.IsClass)
+        //    .Where(x => typeof(ICommand).IsAssignableFrom(x))
+        //    .Select(x => x.FullName).ToList();
+
+        commands = new List<ICommand>()
         {
+
             new StartCommand(),
             new CancelCommand(),
             new SignUpCommand(),

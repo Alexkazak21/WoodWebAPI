@@ -12,7 +12,7 @@ using WoodWebAPI.Auth;
 namespace WoodWebAPI.Migrations.ApplicationDb
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20240201083833_initAuth")]
+    [Migration("20240212135144_initAuth")]
     partial class initAuth
     {
         /// <inheritdoc />
