@@ -8,6 +8,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решения", "Элементы решения", "{CA30B5E9-EB9E-4771-8049-E32651D64A8C}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
+		WoodWebAPI\README.md = WoodWebAPI\README.md
 	EndProjectSection
 EndProject
 Global
