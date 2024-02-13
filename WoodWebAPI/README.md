@@ -22,5 +22,6 @@
 
 перед запуском не забудь накатить миграции
 
-update-database -context applicationdbcontext
-update-database -context wooddbcontext
+>update-database -context applicationdbcontext
+
+>update-database -context wooddbcontext
