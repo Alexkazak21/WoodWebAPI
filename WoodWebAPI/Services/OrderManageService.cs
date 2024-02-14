@@ -224,11 +224,7 @@ namespace WoodWebAPI.Services
         {
             if (model != null)
             {
-                var customer = await _db.Customers.Where(x => x.TelegramID == model.CustomerTelegramId).FirstOrDefaultAsync();
-                
-                if (customer != null)
-                {
-                    var orders = await _db.Orders.Where(x => x.CustomerId == customer.CustomerId && x.IsVerified == false && x.Id == model.OrderId).FirstOrDefaultAsync();
+                    var orders = await _db.Orders.Where(x => x.IsVerified == false && x.Id == model.OrderId).FirstOrDefaultAsync();
 
                     if (orders != null) 
                     {
@@ -249,16 +245,6 @@ namespace WoodWebAPI.Services
                             Message = "Выбранный заказ не пренадлежит указанному пользователю или уже полтверждён",
                         };
                     }
-                }
-                else
-                {
-                    return new ExecResultModel()
-                    {
-                        Success = false,
-                        Message = "пользователя не найдено",
-                    };
-                }
-
             }
             else
             {

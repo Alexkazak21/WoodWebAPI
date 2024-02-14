@@ -154,6 +154,10 @@ public class AdminManageCommand : ICommand
                         new[]
                         {
                             InlineKeyboardButton.WithCallbackData("Удалить администратора","/admin_manage:delete"),
+                        },
+                        new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData("На главную","/main"),
                         }
                     });
 

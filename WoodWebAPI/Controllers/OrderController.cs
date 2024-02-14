@@ -85,7 +85,7 @@ namespace WoodWebAPI.Controllers
             return BadRequest(data);
         }
 
-        [Authorize]
+        //[Authorize]
         [HttpPost]
         public async Task<IActionResult> VerifyOrderByAdmin(VerifyOrderDTO model)
         {
