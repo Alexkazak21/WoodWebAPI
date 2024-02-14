@@ -442,6 +442,16 @@ public class OrderManageCommand : ICommand
                 }
                 else
                 {
+                    InlineKeyboardButton rightButton = new("");
+                    if (verified == true)
+                    {
+                        rightButton = InlineKeyboardButton.WithCallbackData(">", $"/order_manage:true:{orders[1].Id}");
+                    }
+                    else
+                    {
+                        rightButton = InlineKeyboardButton.WithCallbackData(">", $"/order_manage:all:{orders[1].Id}");
+                    }
+
                     await Client.EditMessageTextAsync(
                         chatId: chatId,
                         messageId: messageId,
@@ -454,7 +464,7 @@ public class OrderManageCommand : ICommand
                            {
                                new[]
                                {
-                                   InlineKeyboardButton.WithCallbackData(">", $"/order_manage:all:{orders[1].Id}"),
+                                   rightButton,
                                },
                                new[]
                                {
@@ -483,7 +493,7 @@ public class OrderManageCommand : ICommand
                            {
                                new[]
                                {
-                                    InlineKeyboardButton.WithCallbackData(">", $"/order_manage:all:{orders[1].Id}"),
+                                    InlineKeyboardButton.WithCallbackData(">", $"/order_manage:true:{orders[1].Id}"),
                                },
                                new[]
                                {
@@ -496,14 +506,14 @@ public class OrderManageCommand : ICommand
                                }
                            });
                 }
-                else if (orders.Count > 2 && orders[^1].Id == orderId)
+                else if (orders.Count >= 2 && orders[^1].Id == orderId)
                 {
                     replyMarkup = new InlineKeyboardMarkup(
                            new[]
                            {
                                new[]
                                {
-                                    InlineKeyboardButton.WithCallbackData("<", $"/order_manage:all:{orders[^2].Id}"),
+                                    InlineKeyboardButton.WithCallbackData("<", $"/order_manage:true:{orders[^2].Id}"),
                                },
                                new[]
                                {
@@ -523,8 +533,8 @@ public class OrderManageCommand : ICommand
                            {
                                new[]
                                {
-                                   InlineKeyboardButton.WithCallbackData("<", $"/order_manage:all:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First()) - 1].Id}"),
-                                   InlineKeyboardButton.WithCallbackData(">", $"/order_manage:all:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First()) + 1].Id}"),
+                                   InlineKeyboardButton.WithCallbackData("<", $"/order_manage:true:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First()) - 1].Id}"),
+                                   InlineKeyboardButton.WithCallbackData(">", $"/order_manage:true:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First()) + 1].Id}"),
                                },
                                new[]
                                {

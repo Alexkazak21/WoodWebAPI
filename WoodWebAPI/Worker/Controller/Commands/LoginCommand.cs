@@ -25,7 +25,7 @@ public class LoginCommand : ICommand
                                 webAppInfo),
 
                 InlineKeyboardButton.WithCallbackData(
-                                text: "Продолжить в боте",
+                                text: "Продолжить",
                                 callbackData: "/main"),
            });
 
