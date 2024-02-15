@@ -99,5 +99,17 @@ namespace WoodWebAPI.Controllers
             return BadRequest(data);
         }
 
+        [HttpPost]
+        public async Task<IActionResult> CompleteOrderByAdmin(VerifyOrderDTO model)
+        {
+            var data = await _entityService.CompleteOrderByAdminAsync(model);
+
+            if (data.Success)
+            {
+                return Ok(data);
+            }
+
+            return BadRequest(data);
+        }
     }
 }

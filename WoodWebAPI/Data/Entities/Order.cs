@@ -11,6 +11,7 @@ public partial class Order
     public DateTime CreatedAt { get; set; }
     public bool IsVerified { get; set; }
     public bool IsCompleted { get; set; }
+    public bool IsPaid { get; set; }
     public DateTime CompletedAt { get; set; }
     public virtual ICollection<Timber> Timbers { get; set;} = new List<Timber>();
 }

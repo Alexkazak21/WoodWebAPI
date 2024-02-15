@@ -139,7 +139,7 @@ public class TimberManageService : ITimberManage
                 return new ExecResultModel()
                 {
                     Success = true,
-                    Message = $"Total volume to cut in this order = {totalVolume} m3",
+                    Message = $"{totalVolume}",
                 };
             }
             catch (Exception ex)

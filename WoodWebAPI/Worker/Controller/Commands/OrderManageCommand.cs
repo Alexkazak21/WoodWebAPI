@@ -69,6 +69,26 @@ public class OrderManageCommand : ICommand
                         await ShowAllOrders(update, verified: false);
                     }
                 }
+                else if (commandParts[1] == "complete")
+                {
+                    if (commandParts.Length > 2 && commandParts[2] != null)
+                    {
+                        var result = await CompleteOrderAsync(update, int.Parse(commandParts[2]));
+
+                        await Client.EditMessageTextAsync(
+                        chatId: chatId,
+                        messageId: messageid,
+                        text: $"{result.Message}",
+                        replyMarkup: new InlineKeyboardMarkup(
+                            new[]
+                            {
+                               InlineKeyboardButton.WithCallbackData("Назад","/order_manage"),
+                            }
+                            ),
+                        cancellationToken: cancellationToken
+                    );
+                    }
+                }
                 else if (commandParts.Length > 2 && commandParts[1] == "verify")
                 {
                     var result = await VerifyOrderAsync(update, int.Parse(commandParts[2]));
@@ -107,7 +127,7 @@ public class OrderManageCommand : ICommand
                         new[]
                         {
                             InlineKeyboardButton.WithCallbackData("Заказы в работе","/order_manage:true")
-                        },                        
+                        },
                         new[]
                         {
                             InlineKeyboardButton.WithCallbackData("Главное меню","/main"),
@@ -137,6 +157,54 @@ public class OrderManageCommand : ICommand
         }
     }
 
+    private async Task<ExecResultModel> CompleteOrderAsync(Update update, int orderId)
+    {
+        var content = JsonContent.Create(new VerifyOrderDTO
+        {
+            OrderId = orderId,
+        });
+        ExecResultModel completeResult = null;
+        using (HttpClient httpClient = new HttpClient())
+        {
+            var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Order/CompleteOrderByAdmin", content);
+            var responce = await request.Content.ReadAsStringAsync();
+            completeResult = JsonConvert.DeserializeObject<ExecResultModel>(responce);
+        }
+
+        if (completeResult.Success)
+        {
+            using (HttpClient httpClient = new HttpClient())
+            {
+                var responce = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Customer/GetCustomers", new StringContent(""));
+                var responseJsonContent = await responce.Content.ReadAsStringAsync();
+                GetCustomerModel[] customersArray = JsonConvert.DeserializeObject<GetCustomerModel[]>(responseJsonContent);
+
+                foreach (var customer in customersArray)
+                {
+                    if (customer.Orders.FirstOrDefault(x => x.Id == orderId) != null)
+                    {
+                        var volume = await new CommonChecks().GetVolume(long.Parse(customer.TelegramId), orderId);
+
+                        await Client.SendTextMessageAsync(
+                        chatId: customer.TelegramId,
+                        text: $"{completeResult.Message}\n" +
+                        $"Произведите оплату в размере {decimal.Round(TelegramWorker.PriceForM3 * decimal.Parse(volume.Message), 2, MidpointRounding.AwayFromZero)} бел. рублей",
+                        replyMarkup: new InlineKeyboardMarkup(
+                        new[]
+                        {
+                                new[]
+                                {
+                                    InlineKeyboardButton.WithCallbackData("Оплатить", $"/payment:{customer.TelegramId}:{decimal.Round(TelegramWorker.PriceForM3 * decimal.Parse(volume.Message),2,MidpointRounding.AwayFromZero)}"),
+                                }
+                        })
+                        );
+                    }
+                }
+            }
+            var customers = completeResult;
+        }
+        return completeResult;
+    }
     private async Task ShowAllOrders(Update update, int? orderId = null, bool? verified = null, CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested) return;
@@ -249,10 +317,10 @@ public class OrderManageCommand : ICommand
         InlineKeyboardButton proccessButton = new("");
         // установка корректной кнопки действия с заказом
         if (orders != null)
-        {            
-            if (orderId != null) 
+        {
+            if (orderId != null)
             {
-                if(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsVerified == false)
+                if (orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsVerified == false)
                 {
                     proccessButton = InlineKeyboardButton.WithCallbackData("Приять в работу", $"/order_manage:verify:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}");
                 }
@@ -276,6 +344,7 @@ public class OrderManageCommand : ICommand
             // отображение целого списк заказов без навигации, без признака Verified || Verified = false
             if (orders != null && orderId == null && (verified == null || verified == false))
             {
+                var volumeTotal = await new CommonChecks().GetVolume(chatId, orders[0].Id);
                 if (orders.Count == 1)
                 {
                     await Client.EditMessageTextAsync(
@@ -283,6 +352,7 @@ public class OrderManageCommand : ICommand
                         messageId: messageId,
                         text: $"Заказ № {orders[0].Id}\n" +
                         $"Создан {orders[0].CreatedAt}\n" +
+                        $"Объёмом: {volumeTotal.Message} m3\n" +
                         $"Подтверждён: {(orders[0].IsVerified == false ? "Нет" : "Да")}\n" +
                         $"Завершён: {(orders[0].IsCompleted == false ? "Нет" : "Да")}\n",
                         replyMarkup: new InlineKeyboardMarkup(
@@ -308,6 +378,7 @@ public class OrderManageCommand : ICommand
                         messageId: messageId,
                         text: $"Заказ № {orders[0].Id}\n" +
                         $"Создан {orders[0].CreatedAt}\n" +
+                        $"Объёмом: {volumeTotal.Message} m3\n" +
                         $"Подтверждён: {(orders[0].IsVerified == false ? "Нет" : "Да")}\n" +
                         $"Завершён: {(orders[0].IsCompleted == false ? "Нет" : "Да")}\n",
                         replyMarkup: new InlineKeyboardMarkup(
@@ -336,6 +407,7 @@ public class OrderManageCommand : ICommand
             // отображение целого списк заказов с навигацией, без признака Verified || Verified = false
             else if (orders != null && orderId != null && (verified == null || verified == false))
             {
+                var volumeTotal = await new CommonChecks().GetVolume(chatId, (int)orderId);
                 InlineKeyboardMarkup replyMarkup = null;
 
                 if (orders[0].Id == orderId)
@@ -405,6 +477,7 @@ public class OrderManageCommand : ICommand
                         messageId: messageId,
                         text: $"Заказ № {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}\n" +
                               $"Создан {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].CreatedAt}\n" +
+                              $"Объёмом: {volumeTotal.Message} m3\n" +
                               $"Подтверждён: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsVerified == false ? "Нет" : "Да")}\n" +
                               $"Завершён: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsCompleted == false ? "Нет" : "Да")}\n",
                         replyMarkup: replyMarkup,
@@ -415,6 +488,8 @@ public class OrderManageCommand : ICommand
             //отображение списка заказов без навигации, признак Verified = true
             else if (orders != null && orderId == null && verified == true)
             {
+                var volumeTotal = await new CommonChecks().GetVolume(chatId, orders[0].Id);
+
                 if (orders.Count == 1)
                 {
                     await Client.EditMessageTextAsync(
@@ -422,6 +497,7 @@ public class OrderManageCommand : ICommand
                         messageId: messageId,
                         text: $"Заказ № {orders[0].Id}\n" +
                         $"Создан {orders[0].CreatedAt}\n" +
+                        $"Объёмом: {volumeTotal.Message} m3\n" +
                         $"Подтверждён: {(orders[0].IsVerified == false ? "Нет" : "Да")}\n" +
                         $"Завершён: {(orders[0].IsCompleted == false ? "Нет" : "Да")}\n",
                         replyMarkup: new InlineKeyboardMarkup(
@@ -457,6 +533,7 @@ public class OrderManageCommand : ICommand
                         messageId: messageId,
                         text: $"Заказ № {orders[0].Id}\n" +
                         $"Создан {orders[0].CreatedAt}\n" +
+                        $"Объёмом: {volumeTotal.Message} m3\n" +
                         $"Подтверждён: {(orders[0].IsVerified == false ? "Нет" : "Да")}\n" +
                         $"Завершён: {(orders[0].IsCompleted == false ? "Нет" : "Да")}\n",
                         replyMarkup: new InlineKeyboardMarkup(
@@ -484,6 +561,8 @@ public class OrderManageCommand : ICommand
             // отображение списка заказов с навигацией, признак Verified = true
             else if (orders != null && orderId != null && verified == true)
             {
+                var volumeTotal = await new CommonChecks().GetVolume(chatId, (int)orderId);
+
                 InlineKeyboardMarkup replyMarkup = null;
 
                 if (orders[0].Id == orderId)
@@ -553,12 +632,13 @@ public class OrderManageCommand : ICommand
                         messageId: messageId,
                         text: $"Заказ № {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}\n" +
                               $"Создан {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].CreatedAt}\n" +
+                              $"Объёмом: {volumeTotal.Message} m3\n" +
                               $"Подтверждён: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsVerified == false ? "Нет" : "Да")}\n" +
                               $"Завершён: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsCompleted == false ? "Нет" : "Да")}\n",
                         replyMarkup: replyMarkup,
                         cancellationToken: cancellationToken
                         );
             }
-        }        
+        }
     }
 }

@@ -2,6 +2,7 @@
 using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Customer;
 using WoodWebAPI.Data.Models.Order;
+using WoodWebAPI.Data.Models.Timber;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
@@ -36,6 +37,22 @@ public class CommonChecks
 
             return new[] { new GetAdminDTO() };
         };
+    }
+
+    public async Task<ExecResultModel> GetVolume(long chatid, int orderid)
+    {
+        using (HttpClient httpClient = new HttpClient()) 
+        {
+            var content = JsonContent.Create(new GetTimberDTO()
+            {
+                customerTelegramId = chatid.ToString(),
+                OrderId = orderid
+            });
+            var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Timber/GetTotalVolumeOfOrder",content);
+            var responseVolume = await request.Content.ReadAsStringAsync();
+            var volume = JsonConvert.DeserializeObject<ExecResultModel>(responseVolume);
+            return volume;
+        }
     }
     public async Task<bool> CheckCustomer(long chatid, CancellationToken cancellationToken)
     {

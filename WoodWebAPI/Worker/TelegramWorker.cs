@@ -18,6 +18,7 @@ public class TelegramWorker : BackgroundService
     public static ILogger<TelegramWorker>? Logger { get; set; }
 
     public static List<IsAdmin> AdminList = new List<IsAdmin>();
+    public static decimal PriceForM3 { get; private set; }
 
     public TelegramWorker(ILogger<TelegramWorker> logger, TelegtamWorkerCreds workerCreds)
     {
@@ -34,6 +35,7 @@ public class TelegramWorker : BackgroundService
             TelegramUsername = workerCreds.MainAdmin,
             TelegramId = workerCreds.TelegramId,
         });
+        PriceForM3 = workerCreds.PriceForM3;
     }
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -94,6 +96,8 @@ public class TelegtamWorkerCreds
     private readonly string _baseUrl;
     private readonly string _mainAdmin;
     private readonly string? _telegramId;
+    private readonly decimal _priceForM3;
+    private readonly string _paymentToken;
 
     public string TelegramToken { get => _telegtamToken; }
     public string NgrokURL { get => _ngrokURL; }
@@ -101,13 +105,19 @@ public class TelegtamWorkerCreds
     public string MainAdmin { get => _mainAdmin; }
     public string? TelegramId { get => _telegramId; }
 
-    public TelegtamWorkerCreds(string telegramToken, string ngrokURL, string baseUrl, string mainAdmin, string? telegramId)
+    public decimal PriceForM3 { get => _priceForM3; }
+
+    public string PaymentToken { get => _paymentToken; }
+
+    public TelegtamWorkerCreds(string telegramToken, string ngrokURL, string baseUrl, string mainAdmin, string? telegramId, string price, string paymentToken)
     {
         _telegramId = telegramId;
         _baseUrl = baseUrl;
         _mainAdmin = mainAdmin;
         _telegtamToken = telegramToken;
         _ngrokURL = ngrokURL;
+        decimal.TryParse(price, out _priceForM3);
+        _paymentToken = paymentToken;
     }
 
 }

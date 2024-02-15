@@ -19,5 +19,5 @@ public interface IOrderManage
 
     Task<ExecResultModel> VerifyOrderByAdminAsync(VerifyOrderDTO model);
 
-
+    Task<ExecResultModel> CompleteOrderByAdminAsync(VerifyOrderDTO model);
 }

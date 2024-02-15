@@ -106,6 +106,7 @@ public class CommandExecutor : IUpdateHandler
             new RegAdminCommand(),
             new OrderManageCommand(),
             new AdminManageCommand(),
+            new PaymentCommand(),
         };
     }
 }

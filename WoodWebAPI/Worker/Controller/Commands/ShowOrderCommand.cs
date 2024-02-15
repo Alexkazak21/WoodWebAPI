@@ -31,7 +31,7 @@ namespace WoodWebAPI.Worker.Controller.Commands
                     }
                     catch (Exception ex)
                     {
-                        TelegramWorker.Logger.LogError("Can`t get order id while executing delete command");
+                        TelegramWorker.Logger.LogError("Can`t get order id while executing show command");
                     }
 
                     if (update.Type == UpdateType.Message)
@@ -74,36 +74,70 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                         var result = JsonConvert.DeserializeObject<ExecResultModel>(responce);
                                         if (result != null && result.Success)
                                         {
-                                            volume = double.Parse(result.Message.Split(' ')[8]);
+                                            volume = double.Parse(result.Message);
                                         }
                                     }
 
                                     var orderIsVerified = order.IsVerified ? "ДА" : "НЕТ";
 
-                                    InlineKeyboardMarkup replyMarkup = null;
-                                    if (volume == 0.0)
+                                    if (order.IsCompleted && !order.IsPaid)
                                     {
-                                        replyMarkup = new InlineKeyboardMarkup(
-                                                        new[]
+                                        InlineKeyboardMarkup replyMarkup = null;
+
+                                        if (volume >= 0)
+                                        {
+                                            replyMarkup = new InlineKeyboardMarkup(
+                                                            new[]
                                                             {
                                                                 new[]
-                                                                {             
+                                                                {
+                                                                    InlineKeyboardButton.WithCallbackData("Оплатить", $"/payment:{chatid}:{decimal.Round(TelegramWorker.PriceForM3 * Convert.ToDecimal(volume),2,MidpointRounding.AwayFromZero)}"),
+                                                                },
+                                                                new[]
+                                                                {
+                                                                    InlineKeyboardButton.WithCallbackData("К заказам","/main")
+                                                                }
+                                                            });
+                                        }
+
+
+                                        await Client.EditMessageTextAsync(
+                                                        chatId: chatid,
+                                                        text: $"Ваш заказ номер {order.Id}" +
+                                                              $"\nДата создания: {order.CreatedAt}" +
+                                                              $"\nОбъёмом: {volume} m3" +
+                                                              $"\nЗаказ завершён" +
+                                                              $"Сумма к оплате: {decimal.Round(TelegramWorker.PriceForM3 * Convert.ToDecimal(volume), 2, MidpointRounding.AwayFromZero)}",
+                                                        messageId: update.CallbackQuery.Message.MessageId,
+                                                        replyMarkup: replyMarkup,
+                                                        cancellationToken: cancellationToken);
+                                    }
+                                    else if (!order.IsVerified)
+                                    {
+                                        InlineKeyboardMarkup replyMarkup;
+                                        if (volume == 0.0)
+                                        {
+                                            replyMarkup = new InlineKeyboardMarkup(
+                                                            new[]
+                                                                {
+                                                                new[]
+                                                                {
                                                                     InlineKeyboardButton.WithCallbackData("Добавить бревно",$"/add_timber:{order.Id}")
                                                                 },
                                                                 new[]
                                                                 {
                                                                     InlineKeyboardButton.WithCallbackData("К заказам","/main")
                                                                 }
-                                                        });
-                                    }
-                                    else
-                                    {
-                                        replyMarkup = new InlineKeyboardMarkup(
-                                                        new[]
-                                                        {
+                                                            });
+                                        }
+                                        else
+                                        {
+                                            replyMarkup = new InlineKeyboardMarkup(
                                                             new[]
                                                             {
-                                                                InlineKeyboardButton.WithCallbackData("Добавить бревно",$"/add_timber:{order.Id}")                                                                
+                                                            new[]
+                                                            {
+                                                                InlineKeyboardButton.WithCallbackData("Добавить бревно",$"/add_timber:{order.Id}")
                                                             },
                                                             new[]
                                                             {
@@ -113,18 +147,43 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                                             {
                                                                 InlineKeyboardButton.WithCallbackData("К заказам","/main")
                                                             }
+                                                            });
+                                        }
+
+                                        await Client.EditMessageTextAsync(
+                                                        chatId: chatid,
+                                                        text: $"Ваш заказ номер {order.Id}" +
+                                                              $"\nДата создания: {order.CreatedAt}" +
+                                                              $"\nПодтверждён: {orderIsVerified}" +
+                                                              $"\nОбъёмом: {volume} m3",
+                                                        messageId: update.CallbackQuery.Message.MessageId,
+                                                        replyMarkup: replyMarkup,
+                                                        cancellationToken: cancellationToken);
+                                    }
+                                    else
+                                    {
+                                        InlineKeyboardMarkup replyMarkup;
+
+                                        replyMarkup = new InlineKeyboardMarkup(
+                                                        new[]
+                                                            {
+                                                                new[]
+                                                                {
+                                                                    InlineKeyboardButton.WithCallbackData("К заказам","/main")
+                                                                }
                                                         });
+
+                                        await Client.EditMessageTextAsync(
+                                                        chatId: chatid,
+                                                        text: $"Ваш заказ номер {order.Id}" +
+                                                              $"\nДата создания: {order.CreatedAt}" +
+                                                              $"\nПодтверждён: {orderIsVerified}" +
+                                                              $"\nОбъёмом: {volume} m3",
+                                                        messageId: update.CallbackQuery.Message.MessageId,
+                                                        replyMarkup: replyMarkup,
+                                                        cancellationToken: cancellationToken);
                                     }
 
-                                    await Client.EditMessageTextAsync(
-                                                    chatId: chatid,
-                                                    text: $"Ваш заказ номер {order.Id}" +
-                                                          $"\nДата создания: {order.CreatedAt}" +
-                                                          $"\nПодтверждён: {orderIsVerified}" +
-                                                          $"\nОбъёмом: {volume} m3",
-                                                    messageId: update.CallbackQuery.Message.MessageId,
-                                                    replyMarkup: replyMarkup,
-                                                    cancellationToken: cancellationToken);
                                 }
                             }
                         }

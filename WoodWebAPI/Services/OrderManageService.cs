@@ -33,15 +33,16 @@ namespace WoodWebAPI.Services
                 if (maxOrderNumber > -1)
                 {
                     var order = await _db.Orders.AddAsync(
-                        new Data.Entities.Order
+                        new Order
                         {
                             CreatedAt = DateTime.Now,
                             CustomerId = customer.CustomerId,
                             IsCompleted = false,
                             IsVerified = false,
+                            IsPaid = false,
                             CompletedAt = DateTime.MinValue,
                             OrderId = maxOrderNumber + 1,
-                            Timbers = new List<Data.Entities.Timber>(),
+                            Timbers = new List<Timber>(),
                         }
                         );
                     await _db.SaveChangesAsync();
@@ -165,6 +166,7 @@ namespace WoodWebAPI.Services
                             IsCompleted = order.IsCompleted,
                             CompletedAt = order.CompletedAt,
                             IsVerified = order.IsVerified,
+                            IsPaid = order.IsPaid,
                             Timbers = order.Timbers,
                         }
                         );
@@ -181,7 +183,7 @@ namespace WoodWebAPI.Services
             var customer = await _db.Customers.Where(x => x.TelegramID == model.Customer_TelegramID).FirstOrDefaultAsync();
             if (customer != null)
             {
-                var data = await _db.Orders.Where(x => x.CustomerId == customer.CustomerId && x.IsCompleted == false).Include(x => x.Timbers).ToArrayAsync();
+                var data = await _db.Orders.Where(x => x.CustomerId == customer.CustomerId && x.IsPaid == false).Include(x => x.Timbers).ToArrayAsync();
 
                 List<OrderModel> result = [];
                 if (data != null)
@@ -198,6 +200,7 @@ namespace WoodWebAPI.Services
                                 IsCompleted = order.IsCompleted,
                                 CompletedAt = order.CompletedAt,
                                 IsVerified = order.IsVerified,
+                                IsPaid = order.IsPaid,
                                 Timbers = order.Timbers,
                             });
                     }
@@ -245,6 +248,42 @@ namespace WoodWebAPI.Services
                             Message = "Выбранный заказ не пренадлежит указанному пользователю или уже полтверждён",
                         };
                     }
+            }
+            else
+            {
+                return new ExecResultModel()
+                {
+                    Success = false,
+                    Message = "Входная модель оказалась пуста",
+                };
+            }
+        }
+
+        public async Task<ExecResultModel> CompleteOrderByAdminAsync(VerifyOrderDTO model)
+        {
+            if (model != null)
+            {
+                var orders = await _db.Orders.Where(x => x.IsVerified == true && x.Id == model.OrderId).FirstOrDefaultAsync();
+
+                if (orders != null)
+                {
+                    orders.IsCompleted = true;
+                    await _db.SaveChangesAsync();
+
+                    return new ExecResultModel()
+                    {
+                        Success = true,
+                        Message = "Заказ завершён",
+                    };
+                }
+                else
+                {
+                    return new ExecResultModel()
+                    {
+                        Success = false,
+                        Message = "Выбранный заказ не пренадлежит указанному пользователю или уже полтверждён",
+                    };
+                }
             }
             else
             {
