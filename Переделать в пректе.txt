@@ -1,0 +1,32 @@
+Замечания в работе WoodWebApi (Александр Казакевич)
+
+Придумать новые названия для
+ICustomerManage.GetAsync
+ICustomerManage.GetCustomerByAdminAsync
+
+Заменить флаги (IsVerified, IsCompleted, IsPaid) на Enum состатусами
+
+Запретить удаление заказа, добавить статусы CanceledByUser/CanceledByAdmin/Archived
+
+ITimberManage.GetTotalVolumeOfOrderAsync должен возвращать объем в виде числа, а не строки
+
+Заменить double на decimal
+
+Kub.Value переименовать в Kub.Volume
+
+Добавить единицы измерения к велицинам Volume => VolumeInMeters3
+CustomerManageService.CreateAsync _db.SaveChangesAsync() вызван без await
+
+CustomerManageService.GetCustomerByAdminAsync переписать с использованием linq
+CustomerManageService.GetAsync переписать с использованием linq
+
+Order.OrderId => Order.UserDisplayId а лучше скорее всего удалить
+
+Улучшить поиск эталона TimberManageService.AddTimberToOrderAsync
+            var etalon = await _db.Kub
+                .Where(item => item.LengthInMeters >= model.Length)
+                .Where(item => item.DiameterInCentimeters >= model.Diameter)
+                .OrderBy(item => item.VolumeInMeters3)
+                .FirstOrDefaultAsync();
+
+Переработать DI для telegram бота
