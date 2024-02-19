@@ -111,5 +111,18 @@ namespace WoodWebAPI.Controllers
 
             return BadRequest(data);
         }
+
+        [HttpPost]
+        public async Task<IActionResult> PaidSuccessfull(VerifyOrderDTO model)
+        {
+            var data = await _entityService.PaidSuccessfullyAsync(model);
+
+            if (data.Success)
+            {
+                return Ok(data);
+            }
+
+            return BadRequest(data);
+        }
     }
 }

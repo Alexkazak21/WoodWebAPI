@@ -75,7 +75,23 @@ public class CommandExecutor : IUpdateHandler
                     await command.Execute(update, cancellationToken);
                 }
             }
-        }        
+        }
+        else if(update.Type == Telegram.Bot.Types.Enums.UpdateType.PreCheckoutQuery)
+        {
+            update.CallbackQuery = new CallbackQuery()
+            {
+                From = update.PreCheckoutQuery.From,
+                Data = $"/payment:{update.PreCheckoutQuery.From.Id}",
+            };
+
+            foreach (var command in commands)
+            {
+                if (command.Name == update.CallbackQuery.Data.Split(':')[0])
+                {
+                    await command.Execute(update, cancellationToken);
+                }
+            }
+        }
     }
 
 

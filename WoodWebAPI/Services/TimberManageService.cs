@@ -59,27 +59,27 @@ public class TimberManageService : ITimberManage
 
                 // Проверка на существование введённого значения для длинны в базе
 
-                if (!await _db.Kubs.Where(item => item.Length == model.Length).AnyAsync())
+                if (!await _db.Kub.Where(item => item.Length == model.Length).AnyAsync())
                 {
-                    length = await _db.Kubs.Where(item => item.Length > model.Length).MinAsync(item => item.Length);
+                    length = await _db.Kub.Where(item => item.Length > model.Length).MinAsync(item => item.Length);
                 }
                 else
                 {
-                    length = await _db.Kubs.Where(item => item.Length == model.Length).Select(item => item.Length).FirstAsync();
+                    length = await _db.Kub.Where(item => item.Length == model.Length).Select(item => item.Length).FirstAsync();
                 }
 
                 // Проверка на существование введённого значения для диаметра в базе
 
-                if (!await _db.Kubs.Where(item => item.Diameter == model.Diameter).AnyAsync())
+                if (!await _db.Kub.Where(item => item.Diameter == model.Diameter).AnyAsync())
                 {
-                    diameter = await _db.Kubs.Where(item => item.Diameter > model.Diameter).MinAsync(item => item.Diameter);
+                    diameter = await _db.Kub.Where(item => item.Diameter > model.Diameter).MinAsync(item => item.Diameter);
                 }
                 else
                 {
-                    diameter = await _db.Kubs.Where(item => item.Diameter == model.Diameter).Select(item => item.Diameter).FirstAsync();
+                    diameter = await _db.Kub.Where(item => item.Diameter == model.Diameter).Select(item => item.Diameter).FirstAsync();
                 }
 
-                var volume = await _db.Kubs.Where(item => item.Diameter == diameter && item.Length == length).Select(item => item.Value).FirstAsync();
+                var volume = await _db.Kub.Where(item => item.Diameter == diameter && item.Length == length).Select(item => item.Value).FirstAsync();
 
                 // сохранение данных о добавленном дереве  и изменившемся заказе в базу
 

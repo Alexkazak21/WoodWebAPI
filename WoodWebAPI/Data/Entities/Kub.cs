@@ -1,6 +1,6 @@
 ﻿namespace WoodWebAPI.Data.Entities;
 
-public partial class Kubs
+public partial class Kub
 {
     public int Id { get; set; }
 

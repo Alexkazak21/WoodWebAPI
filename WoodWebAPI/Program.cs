@@ -18,11 +18,26 @@ namespace WoodWebAPI
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-            var configuration = builder
+            builder.Configuration.Sources.Clear();
+            IConfigurationRoot configuration;
+            if (builder.Environment.IsDevelopment()) 
+            {
+                 configuration = builder
                 .Configuration
-                .AddJsonFile("appsettings.local.json", false)
-                .AddJsonFile("Properties\\launchSettings.json")
+                .AddJsonFile("appsettings.Development.json", false)
+                .AddJsonFile("appsettings.local.json", true)
+                .AddJsonFile("Properties\\launchSettings.json")                
                 .Build();
+            }
+            else 
+            {
+                configuration = builder
+                .Configuration
+                .AddJsonFile("appsettings.json", false)
+                .AddJsonFile("Properties\\launchSettings.json", false)
+                .Build();
+            }
+            
 
             // Add services to the container.
 
@@ -112,7 +127,8 @@ namespace WoodWebAPI
                 configuration.GetSection("admin").GetValue<string>("Username") ?? throw new ArgumentNullException("Username", "Username must be declared"),
                 configuration.GetSection("admin").GetValue<string>("TelegramId") ?? throw new ArgumentException("TelegramId", "TelegramId must be declared"),
                 configuration.GetValue<string>("price") ?? throw new ArgumentException("Price","Price must be defined"),
-                configuration.GetValue<string>("paymentToken") ?? throw new ArgumentException("paymentToken", "paymentToken must be defined")
+                configuration.GetValue<string>("paymentToken") ?? throw new ArgumentException("paymentToken", "paymentToken must be defined"),
+                configuration.GetValue<string>("minPrice") ?? throw new ArgumentException("minPrice", "minPrice must be defined")
                 );
             // Adding Background service worker to work with Telegram
             builder.Services.AddHostedService(options => new TelegramWorker(

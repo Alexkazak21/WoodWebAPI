@@ -1,7 +1,7 @@
 ﻿using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
-using WoodWebAPI.Data.Entities;
+using Telegram.Bot.Types.Enums;
 
 namespace WoodWebAPI.Worker
 {
@@ -26,9 +26,14 @@ namespace WoodWebAPI.Worker
             }
             else if(update.CallbackQuery != null)
             {
-                long chatId = long.Parse(update.CallbackQuery.Id);
+                long chatId = update.CallbackQuery.From.Id;
                 await SendUpdate(chatId, botClient, update, cancellationToken);
-            }         
+            }
+            else if(update.Type == UpdateType.PreCheckoutQuery) 
+            {
+                long chatId = update.PreCheckoutQuery.From.Id;
+                await SendUpdate(chatId, botClient, update, cancellationToken);
+            }
             
         }
 
@@ -67,6 +72,10 @@ namespace WoodWebAPI.Worker
                     Data = $"/reg_admin:{textParams}",
                 };
             }
+            else if(update.Message.Type == MessageType.SuccessfulPayment)
+            {
+                update.Message.Text = $"/payment";
+            }    
         }
     }
 }   

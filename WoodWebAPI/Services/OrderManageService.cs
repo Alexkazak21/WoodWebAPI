@@ -245,7 +245,7 @@ namespace WoodWebAPI.Services
                         return new ExecResultModel()
                         {
                             Success = false,
-                            Message = "Выбранный заказ не пренадлежит указанному пользователю или уже полтверждён",
+                            Message = "Выбранный заказ не пренадлежит указанному пользователю или уже подтверждён",
                         };
                     }
             }
@@ -281,7 +281,43 @@ namespace WoodWebAPI.Services
                     return new ExecResultModel()
                     {
                         Success = false,
-                        Message = "Выбранный заказ не пренадлежит указанному пользователю или уже полтверждён",
+                        Message = "Выбранный заказ не пренадлежит указанному пользователю или уже подтверждён",
+                    };
+                }
+            }
+            else
+            {
+                return new ExecResultModel()
+                {
+                    Success = false,
+                    Message = "Входная модель оказалась пуста",
+                };
+            }
+        }
+
+        public async Task<ExecResultModel> PaidSuccessfullyAsync(VerifyOrderDTO model)
+        {
+            if (model != null)
+            {
+                var orders = await _db.Orders.Where(x => x.IsVerified == true && x.IsCompleted == true && x.IsPaid ==false && x.Id == model.OrderId).FirstOrDefaultAsync();
+
+                if (orders != null)
+                {
+                    orders.IsPaid = true;
+                    await _db.SaveChangesAsync();
+
+                    return new ExecResultModel()
+                    {
+                        Success = true,
+                        Message = "Заказ закрыт",
+                    };
+                }
+                else
+                {
+                    return new ExecResultModel()
+                    {
+                        Success = false,
+                        Message = "Выбранный заказ не пренадлежит указанному пользователю или уже подтверждён",
                     };
                 }
             }

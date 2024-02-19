@@ -57,7 +57,7 @@ public class AddTimberCommand : ICommand
                     }
                     catch (Exception ex)
                     {
-                        TelegramWorker.Logger.LogError("Can`t get order id while executing delete command");
+                        TelegramWorker.Logger.LogError("Can`t get order id while executing add timber command");
                     }
 
                     await Client.EditMessageTextAsync(
@@ -83,7 +83,7 @@ public class AddTimberCommand : ICommand
                     }
                     catch (Exception ex)
                     {
-                        TelegramWorker.Logger.LogError("Wrong data when parsing information aboun adding timber to order");
+                        TelegramWorker.Logger.LogError("Wrong data when parsing information about adding timber to order");
                     }
 
                     if (userExist && chatid != -1 && orderId != -1 && diameter != -1 && timberLength != -1)

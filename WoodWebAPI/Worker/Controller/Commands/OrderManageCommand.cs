@@ -185,16 +185,18 @@ public class OrderManageCommand : ICommand
                     {
                         var volume = await new CommonChecks().GetVolume(long.Parse(customer.TelegramId), orderId);
 
+                        var ammountToPay = decimal.Round(TelegramWorker.PriceForM3 * decimal.Parse(volume.Message), 2, MidpointRounding.AwayFromZero) > TelegramWorker.MinPrice ?
+                                            decimal.Round(TelegramWorker.PriceForM3 * decimal.Parse(volume.Message), 2, MidpointRounding.AwayFromZero) : TelegramWorker.MinPrice;
                         await Client.SendTextMessageAsync(
                         chatId: customer.TelegramId,
                         text: $"{completeResult.Message}\n" +
-                        $"Произведите оплату в размере {decimal.Round(TelegramWorker.PriceForM3 * decimal.Parse(volume.Message), 2, MidpointRounding.AwayFromZero)} бел. рублей",
+                        $"Произведите оплату в размере {ammountToPay} бел. рублей",
                         replyMarkup: new InlineKeyboardMarkup(
                         new[]
                         {
                                 new[]
                                 {
-                                    InlineKeyboardButton.WithCallbackData("Оплатить", $"/payment:{customer.TelegramId}:{decimal.Round(TelegramWorker.PriceForM3 * decimal.Parse(volume.Message),2,MidpointRounding.AwayFromZero)}"),
+                                    InlineKeyboardButton.WithCallbackData("Перейти к оплате", $"/payment:{customer.TelegramId}:{ammountToPay}:{orderId}"),
                                 }
                         })
                         );
@@ -248,7 +250,7 @@ public class OrderManageCommand : ICommand
 
             if (verified == true)
             {
-                orders = orders.Where(x => x.IsVerified).ToList();
+                orders = orders.Where(x => x.IsVerified && !x.IsCompleted).ToList();
                 await SendTemplateAsync(orders, chatId, messageId, verified: true, orderId: orderId, cancellationToken: cancellationToken);
             }
             else if (verified == false)
@@ -316,7 +318,7 @@ public class OrderManageCommand : ICommand
 
         InlineKeyboardButton proccessButton = new("");
         // установка корректной кнопки действия с заказом
-        if (orders != null)
+        if (orders.Count > 0)
         {
             if (orderId != null)
             {
@@ -354,7 +356,8 @@ public class OrderManageCommand : ICommand
                         $"Создан {orders[0].CreatedAt}\n" +
                         $"Объёмом: {volumeTotal.Message} m3\n" +
                         $"Подтверждён: {(orders[0].IsVerified == false ? "Нет" : "Да")}\n" +
-                        $"Завершён: {(orders[0].IsCompleted == false ? "Нет" : "Да")}\n",
+                        $"Завершён: {(orders[0].IsCompleted == false ? "Нет" : "Да")}\n" +
+                        $"Оплачен: {(orders[0].IsPaid == false ? "Нет" : "Да")}",
                         replyMarkup: new InlineKeyboardMarkup(
                             new[]
                             {
@@ -380,7 +383,8 @@ public class OrderManageCommand : ICommand
                         $"Создан {orders[0].CreatedAt}\n" +
                         $"Объёмом: {volumeTotal.Message} m3\n" +
                         $"Подтверждён: {(orders[0].IsVerified == false ? "Нет" : "Да")}\n" +
-                        $"Завершён: {(orders[0].IsCompleted == false ? "Нет" : "Да")}\n",
+                        $"Завершён: {(orders[0].IsCompleted == false ? "Нет" : "Да")}\n" +
+                        $"Оплачен: {(orders[0].IsPaid == false ? "Нет" : "Да")}",
                         replyMarkup: new InlineKeyboardMarkup(
                            new[]
                            {
@@ -479,7 +483,8 @@ public class OrderManageCommand : ICommand
                               $"Создан {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].CreatedAt}\n" +
                               $"Объёмом: {volumeTotal.Message} m3\n" +
                               $"Подтверждён: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsVerified == false ? "Нет" : "Да")}\n" +
-                              $"Завершён: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsCompleted == false ? "Нет" : "Да")}\n",
+                              $"Завершён: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsCompleted == false ? "Нет" : "Да")}\n" +
+                               $"Оплачен: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsPaid == false ? "Нет" : "Да")}",
                         replyMarkup: replyMarkup,
                         cancellationToken: cancellationToken
                         );
@@ -499,7 +504,8 @@ public class OrderManageCommand : ICommand
                         $"Создан {orders[0].CreatedAt}\n" +
                         $"Объёмом: {volumeTotal.Message} m3\n" +
                         $"Подтверждён: {(orders[0].IsVerified == false ? "Нет" : "Да")}\n" +
-                        $"Завершён: {(orders[0].IsCompleted == false ? "Нет" : "Да")}\n",
+                        $"Завершён: {(orders[0].IsCompleted == false ? "Нет" : "Да")}\n" +
+                        $"Оплачен: {(orders[0].IsPaid == false ? "Нет" : "Да")}",
                         replyMarkup: new InlineKeyboardMarkup(
                             new[]
                             {
@@ -535,7 +541,8 @@ public class OrderManageCommand : ICommand
                         $"Создан {orders[0].CreatedAt}\n" +
                         $"Объёмом: {volumeTotal.Message} m3\n" +
                         $"Подтверждён: {(orders[0].IsVerified == false ? "Нет" : "Да")}\n" +
-                        $"Завершён: {(orders[0].IsCompleted == false ? "Нет" : "Да")}\n",
+                        $"Завершён: {(orders[0].IsCompleted == false ? "Нет" : "Да")}\n" +
+                        $"Оплачен: {(orders[0].IsPaid == false ? "Нет" : "Да")}",
                         replyMarkup: new InlineKeyboardMarkup(
                            new[]
                            {
@@ -634,7 +641,8 @@ public class OrderManageCommand : ICommand
                               $"Создан {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].CreatedAt}\n" +
                               $"Объёмом: {volumeTotal.Message} m3\n" +
                               $"Подтверждён: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsVerified == false ? "Нет" : "Да")}\n" +
-                              $"Завершён: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsCompleted == false ? "Нет" : "Да")}\n",
+                              $"Завершён: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsCompleted == false ? "Нет" : "Да")}\n" +
+                              $"Оплачен: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsPaid == false ? "Нет" : "Да")}",
                         replyMarkup: replyMarkup,
                         cancellationToken: cancellationToken
                         );

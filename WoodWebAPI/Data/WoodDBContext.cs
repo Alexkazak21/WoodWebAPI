@@ -17,7 +17,7 @@ public partial class WoodDBContext : DbContext
 
     public virtual DbSet<Timber> Timbers { get; set; }
 
-    public virtual DbSet<Kubs> Kubs { get; set; }
+    public virtual DbSet<Kub> Kub { get; set; }
 
     public virtual DbSet<IsAdmin> IsAdmin { get; set; }
 

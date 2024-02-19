@@ -87,13 +87,14 @@ public class MainCommand : ICommand
                             }
                             catch (ApiRequestException ex) 
                             {
-                                await Client.EditMessageTextAsync(
-                               chatId: chatid,
-                               text: "Вы и так находитесь в Главном меню" +
-                               "\nУ вас пока нет заказов. " +
-                               "\nХотите создать заказ?",
-                               messageId: messageId,
-                               replyMarkup: new InlineKeyboardMarkup(
+                                if(update.CallbackQuery == null)
+                                {
+                                    await Client.SendTextMessageAsync(
+                                        chatId: chatid,
+                                        text: "Вы и так находитесь в Главном меню" +
+                                        "\nУ вас пока нет заказов. " +
+                                        "\nХотите создать заказ?",
+                                        replyMarkup: new InlineKeyboardMarkup(
                                                new[]
                                                {
                                                     new[]
@@ -101,7 +102,27 @@ public class MainCommand : ICommand
                                                         InlineKeyboardButton.WithCallbackData("Создать заказ","/new_order"),
                                                     }
                                                }),
-                               cancellationToken: cancellationToken);
+                                        cancellationToken: cancellationToken);
+                                }
+                                else 
+                                {
+                                    await Client.EditMessageTextAsync(
+                                        chatId: chatid,
+                                        text: "Вы и так находитесь в Главном меню" +
+                                        "\nУ вас пока нет заказов. " +
+                                        "\nХотите создать заказ?",
+                                        messageId: messageId,
+                                        replyMarkup: new InlineKeyboardMarkup(
+                                               new[]
+                                               {
+                                                    new[]
+                                                    {
+                                                        InlineKeyboardButton.WithCallbackData("Создать заказ","/new_order"),
+                                                    }
+                                               }),
+                                        cancellationToken: cancellationToken);
+                                }
+                                
                             }
                         }
                         else if (orders.Length >= 5)

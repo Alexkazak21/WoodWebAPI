@@ -84,6 +84,9 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                     {
                                         InlineKeyboardMarkup replyMarkup = null;
 
+                                        var ammountToPay = decimal.Round(TelegramWorker.PriceForM3 * Convert.ToDecimal(volume), 2, MidpointRounding.AwayFromZero) > TelegramWorker.MinPrice ?
+                                                           decimal.Round(TelegramWorker.PriceForM3 * Convert.ToDecimal(volume), 2, MidpointRounding.AwayFromZero) : TelegramWorker.MinPrice;
+
                                         if (volume >= 0)
                                         {
                                             replyMarkup = new InlineKeyboardMarkup(
@@ -91,7 +94,7 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                                             {
                                                                 new[]
                                                                 {
-                                                                    InlineKeyboardButton.WithCallbackData("Оплатить", $"/payment:{chatid}:{decimal.Round(TelegramWorker.PriceForM3 * Convert.ToDecimal(volume),2,MidpointRounding.AwayFromZero)}"),
+                                                                    InlineKeyboardButton.WithCallbackData("Перейти к оплате", $"/payment:{chatid}:{ammountToPay}:{orderId}"),
                                                                 },
                                                                 new[]
                                                                 {
@@ -100,14 +103,13 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                                             });
                                         }
 
-
                                         await Client.EditMessageTextAsync(
                                                         chatId: chatid,
                                                         text: $"Ваш заказ номер {order.Id}" +
                                                               $"\nДата создания: {order.CreatedAt}" +
                                                               $"\nОбъёмом: {volume} m3" +
                                                               $"\nЗаказ завершён" +
-                                                              $"Сумма к оплате: {decimal.Round(TelegramWorker.PriceForM3 * Convert.ToDecimal(volume), 2, MidpointRounding.AwayFromZero)}",
+                                                              $"\nСумма к оплате: {ammountToPay} BYN",
                                                         messageId: update.CallbackQuery.Message.MessageId,
                                                         replyMarkup: replyMarkup,
                                                         cancellationToken: cancellationToken);
@@ -119,7 +121,7 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                         {
                                             replyMarkup = new InlineKeyboardMarkup(
                                                             new[]
-                                                                {
+                                                            {
                                                                 new[]
                                                                 {
                                                                     InlineKeyboardButton.WithCallbackData("Добавить бревно",$"/add_timber:{order.Id}")

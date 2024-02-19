@@ -18,14 +18,21 @@ namespace WoodWebAPI.Worker.Controller
         {
             if (update.Message != null) // проверка на наличие текстового сообщения
             {
-                _logger.LogInformation(update.Message.Chat.Id + "\t" + update.Message.Text);                
+                _logger.LogInformation(DateTime.UtcNow + " +3\n" + update.Message.Chat.Id + "\t" + update.Message.Text);                
 
                 await _distributor.HandleUpdateAsync(_bot, update, cancellationToken);
             }
             else if (update.CallbackQuery != null && update.Message == null)
             {
-                _logger.LogInformation(update.CallbackQuery.Id + "\tCallback Query has come"
+                _logger.LogInformation(DateTime.UtcNow +" +3" + $"\n\tCallback Query from {update.CallbackQuery.From.Id}"
                     + $"\n\tWith text:   {update.CallbackQuery.Data}");
+
+                await _distributor.HandleUpdateAsync(_bot, update, cancellationToken);
+            }
+            else if(update.PreCheckoutQuery != null)
+            {
+                _logger.LogInformation(DateTime.UtcNow + " +3" + $"\n\tPayment Query with text {update.PreCheckoutQuery.OrderInfo}"
+                   + $"\n\tWith ammount:   {update.PreCheckoutQuery.TotalAmount/100}");
 
                 await _distributor.HandleUpdateAsync(_bot, update, cancellationToken);
             }

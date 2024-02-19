@@ -1,4 +1,5 @@
-﻿using Telegram.Bot;
+﻿using System.Globalization;
+using Telegram.Bot;
 using Telegram.Bot.Types;
 using WoodWebAPI.Data.Entities;
 
@@ -17,8 +18,11 @@ public class TelegramWorker : BackgroundService
     public static TelegramBotClient? API { get; set; }
     public static ILogger<TelegramWorker>? Logger { get; set; }
 
-    public static List<IsAdmin> AdminList = new List<IsAdmin>();
+    public static List<IsAdmin> AdminList = new();
     public static decimal PriceForM3 { get; private set; }
+    public static string PaymentToken { get; private set; }
+
+    public static decimal MinPrice {  get; private set; }
 
     public TelegramWorker(ILogger<TelegramWorker> logger, TelegtamWorkerCreds workerCreds)
     {
@@ -36,6 +40,8 @@ public class TelegramWorker : BackgroundService
             TelegramId = workerCreds.TelegramId,
         });
         PriceForM3 = workerCreds.PriceForM3;
+        PaymentToken = workerCreds.PaymentToken;
+        MinPrice = workerCreds.MinPrice;
     }
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -52,9 +58,15 @@ public class TelegramWorker : BackgroundService
         var me = await API.GetMeAsync();
         Console.WriteLine($"My name is {me.FirstName}.");
 
+        //  Checking kub records
         ConsumedMethods activateDbConnection = new ConsumedMethods();
         await activateDbConnection.GetAsync(cancellationToken);
+        var dbContainsKub = await activateDbConnection.GetKubStatus();
+        Logger.LogInformation($"\n{dbContainsKub.Message}\n");
+
         await API.DeleteMyCommandsAsync(BotCommandScope.Default());
+
+        Logger.LogInformation($"\nРабота на адресе - {_ngrokURL}\n");
 
         var commands = new List<BotCommand>()
         {
@@ -97,6 +109,7 @@ public class TelegtamWorkerCreds
     private readonly string _mainAdmin;
     private readonly string? _telegramId;
     private readonly decimal _priceForM3;
+    private readonly decimal _minPrice;
     private readonly string _paymentToken;
 
     public string TelegramToken { get => _telegtamToken; }
@@ -109,15 +122,18 @@ public class TelegtamWorkerCreds
 
     public string PaymentToken { get => _paymentToken; }
 
-    public TelegtamWorkerCreds(string telegramToken, string ngrokURL, string baseUrl, string mainAdmin, string? telegramId, string price, string paymentToken)
+    public decimal MinPrice {  get => _minPrice; }
+
+    public TelegtamWorkerCreds(string telegramToken, string ngrokURL, string baseURL, string mainAdmin, string? telegramId, string price, string paymentToken, string minPrice)
     {
         _telegramId = telegramId;
-        _baseUrl = baseUrl;
+        _baseUrl = baseURL;
         _mainAdmin = mainAdmin;
         _telegtamToken = telegramToken;
         _ngrokURL = ngrokURL;
         decimal.TryParse(price, out _priceForM3);
         _paymentToken = paymentToken;
+        _minPrice = Convert.ToDecimal(minPrice,CultureInfo.InvariantCulture);
     }
 
 }

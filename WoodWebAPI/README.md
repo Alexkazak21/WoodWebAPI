@@ -7,7 +7,7 @@
 
 ѕри запуске ngrok необходимо указать в командной строке команду 
 
->ngrok http --domain=absolute-anchovy-inherently.ngrok-free.app 5550
+>ngrok http 5550
 
 5550 это порт используемый при запуске WEB API. 
 
