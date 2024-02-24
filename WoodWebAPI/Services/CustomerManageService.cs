@@ -1,9 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using WoodWebAPI.Data;
-using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Entities;
+using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Customer;
-using Microsoft.AspNetCore.Mvc;
 
 namespace WoodWebAPI.Services
 {
@@ -17,170 +16,168 @@ namespace WoodWebAPI.Services
         }
         public async Task<ExecResultModel> CreateAsync(CreateCustomerDTO model)
         {
-            await _db.Customers.AddAsync(
+            try
+            {
+                await _db.Customers.AddAsync(
                 new Customer
                 {
                     TelegramID = model.TelegtamId,
                     Name = model.Name,
                     Username = model.Username,
                 });
-
-            if(_db.SaveChangesAsync().Result > 0) 
-            {
-                return new ExecResultModel() 
+                await _db.SaveChangesAsync();
+                return new ExecResultModel()
                 {
                     Success = true,
-                    Message = "Customer added successfully"
-                }; 
+                    Message = "Подбзователь успешно добавлен"
+                };
             }
-            else
+            catch (DbUpdateConcurrencyException)
             {
                 return new ExecResultModel()
                 {
                     Success = false,
-                    Message = "Customer not added, check the input"
+                    Message = "Пользователь не добавлен, повторите попытку позже"
+                };
+            }
+            catch (DbUpdateException)
+            {
+                return new ExecResultModel()
+                {
+                    Success = false,
+                    Message = "Пользователь не добавлен, проверьте входные данные"
                 };
             }
         }
 
         public async Task<ExecResultModel> DeleteAsync(DeleteCustomerDTO model)
         {
-            var data = _db.Customers.Where(x => x.TelegramID == model.TelegramId).First();
-
-            if( data != null ) 
+            try
             {
-               _db.Customers.Remove(data);
+                var data = await _db.Customers.Where(x => x.TelegramID == model.TelegramId).FirstAsync();
+                _db.Customers.Remove(data);
                 await _db.SaveChangesAsync();
                 return new ExecResultModel()
                 {
                     Success = true,
-                    Message = $"Customer with TelegramId = {data.TelegramID} was remowed!",
+                    Message = $"Пользователь с TelegramId = {data.TelegramID} был удалён!",
                 };
             }
-            else
+            catch (DbUpdateException)
             {
                 return new ExecResultModel()
                 {
                     Success = false,
-                    Message = $"Customer with TelegramId = {data.TelegramID} doesn`t exist!",
+                    Message = $"Пользователя с указанным TelegramId не существует!",
                 };
             }
-
         }
 
 
-        public async Task<GetCustomerAdmin[]> GetCustomerByAdminAsync()
+        public Task<GetCustomerAdmin[]?> GetCustomerAsync()
         {
             var customersArray = new List<GetCustomerAdmin>();
 
-            var data = await _db.Customers.CountAsync();
-
-            if (data == 0)
+            try
             {
-                return null;
-            }
-
-            var result = await _db.Customers.ToArrayAsync();
-
-            foreach (var item in result)
-            {
-                customersArray.Add(new GetCustomerAdmin()
+                customersArray.AddRange(_db.Customers
+                .Select(x => new GetCustomerAdmin
                 {
-                    CustomerId = item.CustomerId,
-                    CustomerName = item.Name,
-                    ChatID = item.TelegramID,
-                });
-            }
+                    TelegramId = x.TelegramID,
+                    CustomerId = x.Id,
+                    CustomerName = x.Name,
+                })
+                .DefaultIfEmpty(new()));
 
-            return customersArray.ToArray();
+                return Task.FromResult<GetCustomerAdmin[]?>([.. customersArray]);
+            }
+            catch(ArgumentNullException)
+            {
+                return Task.FromResult<GetCustomerAdmin[]?>([.. customersArray]);
+            }            
         }
-        public async Task<GetCustomerModel[]?> GetAsync()
+        public Task<GetCustomerModel[]?> GetFullCustomerInfoAsync()
         {
             var customersArray = new List<GetCustomerModel>();
 
-            var data = await _db.Customers.CountAsync();
-
-            if (data == 0)
+            try
             {
-                return null;
+                customersArray.AddRange(_db.Customers
+                    .Select(x => new GetCustomerModel
+                    {
+                        Name = x.Name,
+                        TelegramId = x.TelegramID,
+                        Username = x.Name,
+                        Orders = x.Orders,
+                    }));
+
+                return Task.FromResult<GetCustomerModel[]?>([.. customersArray]);
             }
-
-            var result = await _db.Customers.Include(x => x.Orders).ToArrayAsync();
-
-            foreach (var item in result) 
+            catch(ArgumentNullException)
             {
-                customersArray.Add(new GetCustomerModel()
-                {
-                    TelegramId = item.TelegramID,
-                    Name = item.Name,
-                    Orders = item.Orders,
-                    Username = item.Username,                    
-                });
+                return Task.FromResult<GetCustomerModel[]?>([.. customersArray]);
             }
-
-            return customersArray.ToArray();
+            
         }
 
-        public async Task<GetAdminDTO[]?> GetAdminListAsync()
+        public Task<GetAdminDTO[]?> GetAdminListAsync()
         {
             var adminsArray = new List<GetAdminDTO>();
 
-            var data = await _db.IsAdmin.CountAsync();
-
-            if (data == 0)
+            try
             {
-                return null;
+                adminsArray.AddRange(_db.IsAdmin
+                .Select(x => new GetAdminDTO
+                {
+                    AdminRole = x.AdminRole,
+                    CreatedAt = x.CreatedAt,
+                    Id = x.Id,
+                    TelegramId = x.TelegramId,
+                    TelegramUsername = x.TelegramUsername,
+                })
+                .DefaultIfEmpty(new()));
+
+                return Task.FromResult<GetAdminDTO[]?>([.. adminsArray]);
             }
-
-            var result = await _db.IsAdmin.ToArrayAsync();
-
-            foreach (var item in result)
+            catch (ArgumentNullException)
             {
-                adminsArray.Add(new GetAdminDTO()
-                     {
-                        TelegramId = item.TelegramId,
-                        AdminRole = item.AdminRole,
-                        CreatedAt = item.CreatedAt,
-                        Id = item.Id,
-                        TelegramUsername = item.TelegramUsername
-                     });
+                return Task.FromResult<GetAdminDTO[]?>([.. adminsArray]);
             }
-
-            return adminsArray.ToArray();
         }
 
         public async Task<ExecResultModel> UpdateAsync(UpdateCustomerDTO model)
         {
             try
             {
-                var customer = await _db.Customers.Where(x => x.CustomerId == model.CustomerId).FirstOrDefaultAsync();
+                var customer = await _db.Customers
+                    .Where(x => x.Id == model.CustomerId)
+                    .DefaultIfEmpty(new())
+                    .FirstOrDefaultAsync();
 
-                if(customer != null)
-                {
-                    customer.Name = model.Name;
+                customer.Name = model.Name;
 
-                    await _db.SaveChangesAsync();
-
-                    return new ExecResultModel
-                    {
-                        Success = true,
-                        Message = "Custoner was updated",
-                    };
-                }
+                await _db.SaveChangesAsync();
 
                 return new ExecResultModel
                 {
-                    Success = false,
-                    Message = "Custoner doesn`t exist",
+                    Success = true,
+                    Message = "Пользователь успешно обновлён",
                 };
-
             }
-            catch (Exception ex) 
+            catch (DbUpdateException)
             {
                 return new ExecResultModel
                 {
                     Success = false,
-                    Message = ex.Message,
+                    Message = "Ошибка при попытке записать данные в БД",
+                };
+            }
+            catch (ArgumentNullException)
+            {
+                return new ExecResultModel
+                {
+                    Success = false,
+                    Message = "Пользователь не найден",
                 };
             }
         }
@@ -189,26 +186,25 @@ namespace WoodWebAPI.Services
         {
             try
             {
-                var customer = await _db.IsAdmin.Where(x => x.TelegramId == model.TelegramId).FirstOrDefaultAsync();
+                var customer = await _db.IsAdmin.Where(x => x.TelegramId == model.TelegramId).FirstAsync();
 
-                if (customer != null)
+                return new ExecResultModel
                 {
-                    return new ExecResultModel
-                    {
-                        Success = false,
-                        Message = "Администратор уже существует",
-                    };                   
-                }
-
+                    Success = false,
+                    Message = "Администратор уже существует",
+                };
+            }
+            catch (ArgumentNullException)
+            {
                 await _db.IsAdmin.AddAsync(
-                    new IsAdmin 
-                    {
-                        Id = model.Id,
-                        CreatedAt = DateTime.Now,
-                        AdminRole = model.AdminRole,
-                        TelegramId = model.TelegramId,
-                        TelegramUsername = model.TelegramUsername,
-                    });
+                   new IsAdmin
+                   {
+                       Id = model.Id,
+                       CreatedAt = DateTime.Now,
+                       AdminRole = model.AdminRole,
+                       TelegramId = model.TelegramId,
+                       TelegramUsername = model.TelegramUsername,
+                   });
 
                 await _db.SaveChangesAsync();
 
@@ -217,14 +213,13 @@ namespace WoodWebAPI.Services
                     Success = true,
                     Message = "Администратор успешно добавлен",
                 };
-
             }
-            catch (Exception ex)
+            catch (InvalidOperationException invEx)
             {
                 return new ExecResultModel
                 {
                     Success = false,
-                    Message = ex.Message,
+                    Message = invEx.Message,
                 };
             }
         }

@@ -39,7 +39,7 @@ namespace WoodWebAPI.Worker.Controller.Commands
                     CreateCustomerDTO customerDTO = new CreateCustomerDTO()
                     {
                         Name = new string((update.CallbackQuery.From.FirstName ?? "anonymous") + (" " + update.CallbackQuery.From.LastName ?? $" {Guid.NewGuid()}")),
-                        TelegtamId = chatId.ToString(),
+                        TelegtamId = chatId,
                         Username = update.CallbackQuery.From.Username ?? $" {Guid.NewGuid()}",
                     };
 

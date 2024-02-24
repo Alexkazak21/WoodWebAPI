@@ -23,7 +23,7 @@ namespace WoodWebAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> GetCustomerByAdminAsync()
         {
-            var result = await _entityService.GetCustomerByAdminAsync();
+            var result = await _entityService.GetCustomerAsync();
 
             if (result == null)
             {
@@ -36,7 +36,7 @@ namespace WoodWebAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> GetCustomers()
         {
-            var result = await _entityService.GetAsync();
+            var result = await _entityService.GetFullCustomerInfoAsync();
 
             if (result == null)
             {

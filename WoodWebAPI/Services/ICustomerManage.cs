@@ -11,10 +11,11 @@ public interface ICustomerManage
 
     Task<ExecResultModel> DeleteAsync(DeleteCustomerDTO model);
 
-    Task<GetCustomerModel[]?> GetAsync();
+    Task<GetCustomerModel[]?> GetFullCustomerInfoAsync();
 
-    Task<GetCustomerAdmin[]?> GetCustomerByAdminAsync();
+    Task<GetCustomerAdmin[]?> GetCustomerAsync();
 
+    // func for managing admins
     Task<GetAdminDTO[]?> GetAdminListAsync();
 
     Task<ExecResultModel> AddAdminAsync(GetAdminDTO model);

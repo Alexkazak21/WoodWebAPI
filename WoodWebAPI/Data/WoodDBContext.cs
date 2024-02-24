@@ -1,8 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using WoodWebAPI.Data.Entities;
-using WoodWebAPI.Auth;
 
 namespace WoodWebAPI.Data;
 
@@ -15,9 +12,9 @@ public partial class WoodDBContext : DbContext
 
     public virtual DbSet<Order> Orders { get; set; }
 
-    public virtual DbSet<Timber> Timbers { get; set; }
+    public virtual DbSet<OrderPosition> OrderPositions { get; set; }
 
-    public virtual DbSet<Kub> Kub { get; set; }
+    public virtual DbSet<EtalonTimber> EtalonTimberList { get; set; }
 
     public virtual DbSet<IsAdmin> IsAdmin { get; set; }
 
@@ -30,6 +27,30 @@ public partial class WoodDBContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<EtalonTimber>()
+            .Property(x => x.LengthInMeter)
+            .HasConversion(
+                x => x.ToString(),
+                x => decimal.Parse(x));
+
+        modelBuilder.Entity<EtalonTimber>()
+            .Property(x => x.DiameterInСantimeter)
+            .HasConversion(
+                x => x.ToString(),
+                x => decimal.Parse(x));
+
+        modelBuilder.Entity<OrderPosition>()
+            .Property(x => x.LengthInMeter)
+            .HasConversion(
+                x => x.ToString(),
+                x => decimal.Parse(x));
+
+        modelBuilder.Entity<OrderPosition>()
+            .Property(x => x.DiameterInCantimeter)
+            .HasConversion(
+                x => x.ToString(),
+                x => decimal.Parse(x));
+
         base.OnModelCreating(modelBuilder);
     }
 }

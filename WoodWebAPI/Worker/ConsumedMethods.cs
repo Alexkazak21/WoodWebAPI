@@ -29,7 +29,7 @@ public class ConsumedMethods
         {
             await connection.OpenAsync();
             SqlCommand command = new SqlCommand();
-            command.CommandText = "select * from Kub";
+            command.CommandText = "select * from EtalonTimberList";
             command.Connection = connection;
             var existCheck = await command.ExecuteReaderAsync();
 

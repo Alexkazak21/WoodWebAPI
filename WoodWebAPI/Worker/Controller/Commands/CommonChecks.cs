@@ -2,7 +2,7 @@
 using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Customer;
 using WoodWebAPI.Data.Models.Order;
-using WoodWebAPI.Data.Models.Timber;
+using WoodWebAPI.Data.Models.OrderPosition;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
@@ -15,7 +15,7 @@ public class CommonChecks
             var content = JsonContent.Create(
                 new GetOrdersDTO()
                 {
-                    Customer_TelegramID = chatid.ToString(),
+                    CustomerTelegramId = chatid,
                 });
 
             var responce = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Order/GetOrdersOfCustomer", content, cancellationToken);
@@ -43,9 +43,9 @@ public class CommonChecks
     {
         using (HttpClient httpClient = new HttpClient()) 
         {
-            var content = JsonContent.Create(new GetTimberDTO()
+            var content = JsonContent.Create(new GetOrderPositionsByOrderIdDTO()
             {
-                customerTelegramId = chatid.ToString(),
+                TelegramId = chatid,
                 OrderId = orderid
             });
             var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Timber/GetTotalVolumeOfOrder",content);
@@ -70,7 +70,7 @@ public class CommonChecks
                     {
                         try
                         {
-                            if (long.Parse(customer.TelegramId) == chatid)
+                            if (customer.TelegramId == chatid)
                             {
                                 return true;
                             }

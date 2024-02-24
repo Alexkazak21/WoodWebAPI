@@ -46,7 +46,7 @@ public class AdminManageCommand : ICommand
                                 {
                                     new[]
                                     {
-                                        InlineKeyboardButton.WithCallbackData("Добавить",$"/reg_admin:{availableToAddAdmins[0].ChatID}"),
+                                        InlineKeyboardButton.WithCallbackData("Добавить",$"/reg_admin:{availableToAddAdmins[0].TelegramId}"),
                                     },
                                     new[]
                                     {
@@ -57,7 +57,7 @@ public class AdminManageCommand : ICommand
                             await Client.EditMessageTextAsync(
                                 chatId: chatId,
                                 messageId: messageId,
-                                text: $"Пользователь {availableToAddAdmins[0].ChatID}" +
+                                text: $"Пользователь {availableToAddAdmins[0].TelegramId}" +
                                 $"\nС именем: {availableToAddAdmins[0].CustomerName}",
                                 replyMarkup: replymarkup,
                                 cancellationToken: cancellationToken);
@@ -96,7 +96,7 @@ public class AdminManageCommand : ICommand
                                 {
                                     new[]
                                     {
-                                        InlineKeyboardButton.WithCallbackData("Удалить",$"/del_admin:{availableToDeleteAdmins[0].ChatID}"),
+                                        InlineKeyboardButton.WithCallbackData("Удалить",$"/del_admin:{availableToDeleteAdmins[0].TelegramId}"),
                                     },
                                     new[]
                                     {
@@ -107,7 +107,7 @@ public class AdminManageCommand : ICommand
                             await Client.EditMessageTextAsync(
                                 chatId: chatId,
                                 messageId: messageId,
-                                text: $"Администратор {availableToDeleteAdmins[0].ChatID}" +
+                                text: $"Администратор {availableToDeleteAdmins[0].TelegramId}" +
                                 $"\nС именем: {availableToDeleteAdmins[0].CustomerName}",
                                 replyMarkup: replymarkup,
                                 cancellationToken: cancellationToken);
@@ -190,14 +190,14 @@ public class AdminManageCommand : ICommand
             {
                 if (availableCustomer) 
                 {
-                    if (TelegramWorker.AdminList.FirstOrDefault(x => x.TelegramId == customer.ChatID) == null)
+                    if (TelegramWorker.AdminList.FirstOrDefault(x => x.TelegramId == customer.TelegramId.ToString()) == null)
                     {
                         availableCustomersToAdmin.Add(customer);
                     }
                 }
                 else
                 {
-                    if (TelegramWorker.AdminList.FirstOrDefault(x => x.TelegramId == customer.ChatID && x.Id > 0) != null)
+                    if (TelegramWorker.AdminList.FirstOrDefault(x => x.TelegramId == customer.TelegramId.ToString() && x.Id > 0) != null)
                     {
                         availableCustomersToAdmin.Add(customer);
                     }

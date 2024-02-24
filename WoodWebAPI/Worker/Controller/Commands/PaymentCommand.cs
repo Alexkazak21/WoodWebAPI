@@ -6,6 +6,7 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.Payments;
 using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Order;
+using WoodWebAPI.Data.Entities;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
@@ -30,7 +31,7 @@ public class PaymentCommand : ICommand
                     var orderId = int.Parse(update.PreCheckoutQuery.InvoicePayload);
                     var orders = await new CommonChecks().CheckOrdersOfCustomer(telegramId, cancellationToken);
 
-                    if (orders.Where(x => x.OrderId == orderId && x.IsCompleted == true).First() != null)
+                    if (orders.Where(x => x.Id == orderId && x.Status == OrderStatus.Completed).First() != null)
                     {
                         var precheckId = update.PreCheckoutQuery.Id;
                         await Client.AnswerPreCheckoutQueryAsync(
@@ -63,7 +64,7 @@ public class PaymentCommand : ICommand
                 var orderId = int.Parse(update.Message.SuccessfulPayment.InvoicePayload);
                 var orders = await new CommonChecks().CheckOrdersOfCustomer(telegramId, cancellationToken);
 
-                if (orders.Where(x => x.OrderId == orderId && x.IsCompleted == true).First() != null)
+                if (orders.Where(x => x.Id == orderId && x.Status == OrderStatus.Completed).First() != null)
                 {
 
                     using (HttpClient httpClient = new HttpClient())

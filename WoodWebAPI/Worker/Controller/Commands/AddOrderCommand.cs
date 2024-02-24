@@ -18,7 +18,7 @@ public class AddOrderCommand : ICommand
     {
         if (!cancellationToken.IsCancellationRequested)
         {
-            if(update != null && update.Type == UpdateType.CallbackQuery)
+            if (update != null && update.Type == UpdateType.CallbackQuery)
             {
                 var chatid = update.CallbackQuery.From.Id;
 
@@ -29,23 +29,23 @@ public class AddOrderCommand : ICommand
                 {
                     GetOrdersDTO getOrders = new GetOrdersDTO()
                     {
-                        Customer_TelegramID = chatid.ToString(),
+                        CustomerTelegramId = chatid,
                     };
                     var content = JsonContent.Create(getOrders);
 
                     var responce = await client.PostAsync($"{TelegramWorker.BaseUrl}/api/Order/GetOrdersOfCustomer", content, cancellationToken);
 
-                    orderList = JsonConvert.DeserializeObject<OrderModel[]?>(await responce.Content.ReadAsStringAsync(cancellationToken));                    
+                    orderList = JsonConvert.DeserializeObject<OrderModel[]?>(await responce.Content.ReadAsStringAsync(cancellationToken));
                 }
 
-                if( orderList != null && orderList.Count() < 4)
+                if (orderList != null && orderList.Count() < 4)
                 {
                     using (HttpClient client = new HttpClient())
                     {
-                        CreateOrderDTO createOrder = new CreateOrderDTO()
-                        {
-                            Customer_Telegram_Id = chatid.ToString(),
-                        };
+                        GetOrdersDTO createOrder = new()
+                           {
+                                CustomerTelegramId = chatid,
+                           };
                         var content = JsonContent.Create(createOrder);
 
                         var request = await client.PostAsync("http://localhost:5550/api/Order/CreateOrder", content, cancellationToken);
@@ -67,7 +67,7 @@ public class AddOrderCommand : ICommand
                                 cancellationToken: cancellationToken);
                         }
                     }
-                }  
+                }
                 else if (orderList != null && orderList.Count() == 4)
                 {
 

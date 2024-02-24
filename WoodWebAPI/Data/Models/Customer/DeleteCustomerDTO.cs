@@ -4,5 +4,5 @@ namespace WoodWebAPI.Data.Models.Customer;
 
 public class DeleteCustomerDTO
 {
-    public string TelegramId { get; set; }
+    public long TelegramId { get; set; }
 }

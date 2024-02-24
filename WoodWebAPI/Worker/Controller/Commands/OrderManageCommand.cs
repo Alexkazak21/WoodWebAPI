@@ -5,6 +5,8 @@ using Telegram.Bot.Types.ReplyMarkups;
 using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Customer;
 using WoodWebAPI.Data.Models.Order;
+using WoodWebAPI.Data.Entities;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
@@ -183,7 +185,7 @@ public class OrderManageCommand : ICommand
                 {
                     if (customer.Orders.FirstOrDefault(x => x.Id == orderId) != null)
                     {
-                        var volume = await new CommonChecks().GetVolume(long.Parse(customer.TelegramId), orderId);
+                        var volume = await new CommonChecks().GetVolume(customer.TelegramId, orderId);
 
                         var ammountToPay = decimal.Round(TelegramWorker.PriceForM3 * decimal.Parse(volume.Message), 2, MidpointRounding.AwayFromZero) > TelegramWorker.MinPrice ?
                                             decimal.Round(TelegramWorker.PriceForM3 * decimal.Parse(volume.Message), 2, MidpointRounding.AwayFromZero) : TelegramWorker.MinPrice;
@@ -250,12 +252,12 @@ public class OrderManageCommand : ICommand
 
             if (verified == true)
             {
-                orders = orders.Where(x => x.IsVerified && !x.IsCompleted).ToList();
+                orders = orders.Where(x => x.Status == OrderStatus.Verivied).ToList();
                 await SendTemplateAsync(orders, chatId, messageId, verified: true, orderId: orderId, cancellationToken: cancellationToken);
             }
             else if (verified == false)
             {
-                orders = orders.Where(x => !x.IsVerified).ToList();
+                orders = orders.Where(x => x.Status == OrderStatus.NewOrder).ToList();
                 await SendTemplateAsync(orders, chatId, messageId, verified: false, orderId: orderId, cancellationToken: cancellationToken);
             }
             else
@@ -286,6 +288,39 @@ public class OrderManageCommand : ICommand
 
     private async Task SendTemplateAsync(List<OrderModel>? orders, long chatId, int messageId, bool? verified = null, int? orderId = null, CancellationToken cancellationToken = default)
     {
+
+        bool isVerified = false;
+        bool isCompleted = false;
+        bool isPaid = false;
+
+        if(orders != null && orderId != null) 
+        {
+            orderId = orders[0].Id;
+
+            switch (orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Status)
+            {
+                case OrderStatus.Verivied:
+                    {
+                        isVerified = true;
+                    }
+                    break;
+                case OrderStatus.Completed:
+                    {
+                        isVerified = true;
+                        isCompleted = true;
+                    }
+                    break;
+                case OrderStatus.Paid:
+                    {
+                        isPaid = true;
+                        isCompleted = true;
+                        isVerified = true;
+                    }
+                    break;
+
+            }
+        }
+
         // список заказов пуст
         if (orders == null || orders.Count == 0)
         {
@@ -322,7 +357,7 @@ public class OrderManageCommand : ICommand
         {
             if (orderId != null)
             {
-                if (orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsVerified == false)
+                if (isVerified == false)
                 {
                     proccessButton = InlineKeyboardButton.WithCallbackData("Приять в работу", $"/order_manage:verify:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}");
                 }
@@ -333,7 +368,7 @@ public class OrderManageCommand : ICommand
             }
             else
             {
-                if (orders[0].IsVerified == false)
+                if (isVerified == false)
                 {
                     proccessButton = InlineKeyboardButton.WithCallbackData("Приять в работу", $"/order_manage:verify:{orders[0].Id}");
                 }
@@ -355,9 +390,9 @@ public class OrderManageCommand : ICommand
                         text: $"Заказ № {orders[0].Id}\n" +
                         $"Создан {orders[0].CreatedAt}\n" +
                         $"Объёмом: {volumeTotal.Message} m3\n" +
-                        $"Подтверждён: {(orders[0].IsVerified == false ? "Нет" : "Да")}\n" +
-                        $"Завершён: {(orders[0].IsCompleted == false ? "Нет" : "Да")}\n" +
-                        $"Оплачен: {(orders[0].IsPaid == false ? "Нет" : "Да")}",
+                        $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
+                        $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
+                        $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
                         replyMarkup: new InlineKeyboardMarkup(
                             new[]
                             {
@@ -382,9 +417,9 @@ public class OrderManageCommand : ICommand
                         text: $"Заказ № {orders[0].Id}\n" +
                         $"Создан {orders[0].CreatedAt}\n" +
                         $"Объёмом: {volumeTotal.Message} m3\n" +
-                        $"Подтверждён: {(orders[0].IsVerified == false ? "Нет" : "Да")}\n" +
-                        $"Завершён: {(orders[0].IsCompleted == false ? "Нет" : "Да")}\n" +
-                        $"Оплачен: {(orders[0].IsPaid == false ? "Нет" : "Да")}",
+                        $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
+                        $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
+                        $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
                         replyMarkup: new InlineKeyboardMarkup(
                            new[]
                            {
@@ -482,9 +517,9 @@ public class OrderManageCommand : ICommand
                         text: $"Заказ № {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}\n" +
                               $"Создан {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].CreatedAt}\n" +
                               $"Объёмом: {volumeTotal.Message} m3\n" +
-                              $"Подтверждён: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsVerified == false ? "Нет" : "Да")}\n" +
-                              $"Завершён: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsCompleted == false ? "Нет" : "Да")}\n" +
-                               $"Оплачен: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsPaid == false ? "Нет" : "Да")}",
+                              $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
+                              $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
+                               $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
                         replyMarkup: replyMarkup,
                         cancellationToken: cancellationToken
                         );
@@ -503,9 +538,9 @@ public class OrderManageCommand : ICommand
                         text: $"Заказ № {orders[0].Id}\n" +
                         $"Создан {orders[0].CreatedAt}\n" +
                         $"Объёмом: {volumeTotal.Message} m3\n" +
-                        $"Подтверждён: {(orders[0].IsVerified == false ? "Нет" : "Да")}\n" +
-                        $"Завершён: {(orders[0].IsCompleted == false ? "Нет" : "Да")}\n" +
-                        $"Оплачен: {(orders[0].IsPaid == false ? "Нет" : "Да")}",
+                        $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
+                        $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
+                        $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
                         replyMarkup: new InlineKeyboardMarkup(
                             new[]
                             {
@@ -540,9 +575,9 @@ public class OrderManageCommand : ICommand
                         text: $"Заказ № {orders[0].Id}\n" +
                         $"Создан {orders[0].CreatedAt}\n" +
                         $"Объёмом: {volumeTotal.Message} m3\n" +
-                        $"Подтверждён: {(orders[0].IsVerified == false ? "Нет" : "Да")}\n" +
-                        $"Завершён: {(orders[0].IsCompleted == false ? "Нет" : "Да")}\n" +
-                        $"Оплачен: {(orders[0].IsPaid == false ? "Нет" : "Да")}",
+                        $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
+                        $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
+                        $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
                         replyMarkup: new InlineKeyboardMarkup(
                            new[]
                            {
@@ -632,17 +667,17 @@ public class OrderManageCommand : ICommand
                                    InlineKeyboardButton.WithCallbackData("Главное меню", "/main"),
                                }
                            });
-                }
-
+                };
+                
                 await Client.EditMessageTextAsync(
                         chatId: chatId,
                         messageId: messageId,
                         text: $"Заказ № {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}\n" +
                               $"Создан {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].CreatedAt}\n" +
                               $"Объёмом: {volumeTotal.Message} m3\n" +
-                              $"Подтверждён: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsVerified == false ? "Нет" : "Да")}\n" +
-                              $"Завершён: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsCompleted == false ? "Нет" : "Да")}\n" +
-                              $"Оплачен: {(orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].IsPaid == false ? "Нет" : "Да")}",
+                              $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
+                              $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
+                              $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
                         replyMarkup: replyMarkup,
                         cancellationToken: cancellationToken
                         );

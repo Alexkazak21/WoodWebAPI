@@ -28,7 +28,7 @@ namespace WoodWebAPI.Controllers
                 return data;
             }
 
-            return null;
+            return data;
         }
 
         [HttpPost]
@@ -42,11 +42,11 @@ namespace WoodWebAPI.Controllers
                 return data;
             }
 
-            return null;
+            return data;
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateOrder(CreateOrderDTO model)
+        public async Task<IActionResult> CreateOrder(GetOrdersDTO model)
         {
             var data = await _entityService.CreateAsync(model);
 
@@ -59,9 +59,9 @@ namespace WoodWebAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> DeleteOrder(DeleteOrderDTO model)
+        public async Task<IActionResult> DeleteOrder(ArchiveOrderDTO model)
         {
-            var data = await _entityService.DeleteAsync(model);
+            var data = await _entityService.ArchiveAsync(model);
 
             if (data.Success)
             {
@@ -73,9 +73,9 @@ namespace WoodWebAPI.Controllers
 
         [Authorize]
         [HttpPost]
-        public async Task<IActionResult> DeleteOrderByAdmin(DeleteOrderDTO model)
+        public async Task<IActionResult> DeleteOrderByAdmin(ArchiveOrderDTO model)
         {
-            var data = await _entityService.DeleteByAdminAsync(model);
+            var data = await _entityService.ArchiveByAdminAsync(model);
 
             if (data.Success)
             {

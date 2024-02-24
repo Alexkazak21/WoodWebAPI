@@ -118,7 +118,8 @@ namespace WoodWebAPI
             builder.Services.AddDbContext<WoodDBContext>(options => options.UseSqlServer(configuration.GetConnectionString("ConnStrWood")));
             builder.Services.AddScoped<ICustomerManage, CustomerManageService>();
             builder.Services.AddScoped<IOrderManage, OrderManageService>();
-            builder.Services.AddScoped<ITimberManage, TimberManageService>();
+            builder.Services.AddScoped<IOrderPositionManage, OrderPositionManageService>();
+            //builder.Services.AddSingleton(typeof(TelegtamWorkerCreds));
 
             var workingCreds = new TelegtamWorkerCreds(
                 configuration.GetValue<string>("TelegramToken") ?? throw new ArgumentNullException("TelegramToken", "Telegtam Token field must be specified"),
@@ -130,6 +131,7 @@ namespace WoodWebAPI
                 configuration.GetValue<string>("paymentToken") ?? throw new ArgumentException("paymentToken", "paymentToken must be defined"),
                 configuration.GetValue<string>("minPrice") ?? throw new ArgumentException("minPrice", "minPrice must be defined")
                 );
+
             // Adding Background service worker to work with Telegram
             builder.Services.AddHostedService(options => new TelegramWorker(
                 options.GetRequiredService<ILogger<TelegramWorker>>(),

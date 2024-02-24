@@ -3,8 +3,9 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using WoodWebAPI.Data.Entities;
 using WoodWebAPI.Data.Models;
-using WoodWebAPI.Data.Models.Timber;
+using WoodWebAPI.Data.Models.OrderPosition;
 
 namespace WoodWebAPI.Worker.Controller.Commands
 {
@@ -29,7 +30,7 @@ namespace WoodWebAPI.Worker.Controller.Commands
                     {
                         int.TryParse(update?.CallbackQuery?.Data?.Substring(update.CallbackQuery.Data.IndexOf(':') + 1, update.CallbackQuery.Data.Length - 1 - update.CallbackQuery.Data.IndexOf(':')), out orderId);
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         TelegramWorker.Logger.LogError("Can`t get order id while executing show command");
                     }
@@ -58,11 +59,11 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                 if (order.Id == orderId)
                                 {
                                     var volume = 0.0;
-                                    using (HttpClient httpClient = new HttpClient())
+                                    using (HttpClient httpClient = new())
                                     {
-                                        GetTimberDTO getTimbers = new GetTimberDTO()
+                                        GetOrderPositionsByOrderIdDTO getTimbers = new()
                                         {
-                                            customerTelegramId = chatid.ToString(),
+                                            TelegramId = chatid,
                                             OrderId = orderId,
                                         };
 
@@ -78,9 +79,9 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                         }
                                     }
 
-                                    var orderIsVerified = order.IsVerified ? "ДА" : "НЕТ";
+                                    var orderIsVerified = order.Status == OrderStatus.Verivied ? "ДА" : "НЕТ";
 
-                                    if (order.IsCompleted && !order.IsPaid)
+                                    if (order.Status == OrderStatus.Verivied && order.Status != OrderStatus.Paid)
                                     {
                                         InlineKeyboardMarkup replyMarkup = null;
 
@@ -114,7 +115,7 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                                         replyMarkup: replyMarkup,
                                                         cancellationToken: cancellationToken);
                                     }
-                                    else if (!order.IsVerified)
+                                    else if (order.Status != OrderStatus.Verivied)
                                     {
                                         InlineKeyboardMarkup replyMarkup;
                                         if (volume == 0.0)

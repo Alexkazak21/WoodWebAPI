@@ -52,9 +52,9 @@ public class DeleteOrderCommand : ICommand
                     using (HttpClient httpClient = new HttpClient())
                     {
                         var content = JsonContent.Create(
-                            new DeleteOrderDTO()
+                            new ArchiveOrderDTO()
                             {
-                                CustomerTelegramId = chatid.ToString(),
+                                CustomerTelegramId = chatid,
                                 OrderId = orderId,
                             });
 

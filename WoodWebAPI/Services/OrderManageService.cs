@@ -15,76 +15,61 @@ namespace WoodWebAPI.Services
             _db = db;
         }
 
-        public async Task<ExecResultModel> CreateAsync(CreateOrderDTO model)
+        public async Task<ExecResultModel> CreateAsync(GetOrdersDTO model)
         {
-            var customer = await _db.Customers.Where(x => x.TelegramID == model.Customer_Telegram_Id).FirstOrDefaultAsync();
+            var customer = await _db.Customers.Where(x => x.TelegramID == model.CustomerTelegramId).FirstOrDefaultAsync();
 
-            if (customer != null)
-            {
-                int maxOrderNumber = -1;
-                try
-                {
-                    maxOrderNumber = await _db.Orders.Where(x => x.CustomerId == customer.CustomerId).Select(x => x.OrderId).MaxAsync();
-                }
-                catch (Exception ex)
-                {
-                    maxOrderNumber = 0;
-                }
-                if (maxOrderNumber > -1)
-                {
-                    var order = await _db.Orders.AddAsync(
-                        new Order
-                        {
-                            CreatedAt = DateTime.Now,
-                            CustomerId = customer.CustomerId,
-                            IsCompleted = false,
-                            IsVerified = false,
-                            IsPaid = false,
-                            CompletedAt = DateTime.MinValue,
-                            OrderId = maxOrderNumber + 1,
-                            Timbers = new List<Timber>(),
-                        }
-                        );
-                    await _db.SaveChangesAsync();
-
-                    return new ExecResultModel()
-                    {
-                        Success = true,
-                        Message = $"Заказ {order.Entity.Id} был успешно добавлен пользователю {customer.Name}!",
-                    };
-                }
-            }
-
-            return new ExecResultModel()
-            {
-                Success = false,
-                Message = "Не возможно найти пользователя для добавления заказа",
-            };
-        }
-
-        public async Task<ExecResultModel> Delete(Order[] data)
-        {
-            if (data.Length == 1)
-            {
-                
-                var context = await _db.Orders.Include(x => x.Timbers).FirstAsync(x => x.Id == data[0].Id);
-                _db.Orders.Remove(context);
-                await _db.SaveChangesAsync();
-            }
-            else if (data.Length == 0)
+            if (customer == null)
             {
                 return new ExecResultModel()
                 {
                     Success = false,
-                    Message = $"Не найдено заказов с указанным ID",
+                    Message = "Не возможно найти пользователя для добавления заказа",
                 };
             }
-            else
+
+            try
+            {
+                var order = await _db.Orders.AddAsync(
+                new Order
+                {
+                    CreatedAt = DateTime.UtcNow,
+                    CustomerId = customer.TelegramID,
+                    Status = OrderStatus.NewOrder,
+                    CompletedAt = DateTime.MinValue,
+                    OrderPositions = [],
+                }
+                );
+                await _db.SaveChangesAsync();
+
+                return new ExecResultModel()
+                {
+                    Success = true,
+                    Message = $"Заказ {order.Entity.Id} был успешно добавлен пользователю {customer.Name}!",
+                };
+            }
+            catch (DbUpdateException)
             {
                 return new ExecResultModel()
                 {
                     Success = false,
-                    Message = "Найдено долее 1 заказа",
+                    Message = $"Произошла непредвиденная ошибка, попробуйте позже",
+                };
+            }
+        }
+
+        public async Task<ExecResultModel> Archive(Order data)
+        {
+            try
+            {
+                var archived = await _db.Orders.Where(x => x.CustomerId == data.CustomerId && x.Id == data.Id).FirstAsync();
+            }
+            catch (ArgumentNullException)
+            {
+                return new ExecResultModel()
+                {
+                    Success = false,
+                    Message = "Заказ не найден",
                 };
             }
 
@@ -94,127 +79,90 @@ namespace WoodWebAPI.Services
                 Message = "Заказ удалён",
             };
         }
-        public async Task<ExecResultModel> DeleteAsync(DeleteOrderDTO model)
+        public async Task<ExecResultModel> ArchiveAsync(ArchiveOrderDTO model)
         {
-            if (model != null)
-            {
-                var customer = await _db.Customers.Where(x => x.TelegramID == model.CustomerTelegramId).FirstOrDefaultAsync();
-                if (customer != null)
-                {
-                    var data = await _db.Orders.Where(x => x.CustomerId == customer.CustomerId && x.Id == model.OrderId && x.IsVerified == false).ToArrayAsync();
-                    return await Delete(data);
-                }
-                return new ExecResultModel()
-                {
-                    Success = false,
-                    Message = "Указанный пользователь не найден",
-                };
-            }
-            else
+            if (model == null)
             {
                 return new ExecResultModel()
                 {
                     Success = false,
                     Message = $"Данных нет",
                 };
+            }
+            else
+            {
+                try
+                {
+                    var data = await _db.Orders.Where(x => x.CustomerId == model.CustomerTelegramId && x.Id == model.OrderId && x.Status == OrderStatus.Verivied).FirstAsync();
+                    return await Archive(data);
+                }
+                catch (ArgumentNullException)
+                {
+                    return new ExecResultModel()
+                    {
+                        Success = false,
+                        Message = "Указанный заказ не найден",
+                    };
+                }
             }
         }
 
-        public async Task<ExecResultModel> DeleteByAdminAsync(DeleteOrderDTO model)
+        public async Task<ExecResultModel> ArchiveByAdminAsync(ArchiveOrderDTO model)
         {
-            if (model != null)
-            {
-                var customer = await _db.Customers.Where(x => x.TelegramID == model.CustomerTelegramId).FirstOrDefaultAsync();
-
-                if (customer != null)
-                {
-                    var data = await _db.Orders.Where((x) => x.CustomerId == customer.CustomerId && x.OrderId == model.OrderId).ToArrayAsync();
-                    return await Delete(data);
-                }
-                return new ExecResultModel()
-                {
-                    Success = false,
-                    Message = "Указанный пользователь не найден",
-                };
-            }
-            else
+            if (model == null)
             {
                 return new ExecResultModel()
                 {
                     Success = false,
                     Message = $"Данных нет",
                 };
+            }
+            else
+            {
+                var data = await _db.Orders.Where(x => x.CustomerId == model.CustomerTelegramId && x.Id == model.OrderId).FirstAsync();
+                return await Archive(data);
             }
         }
 
         public async Task<OrderModel[]?> GetFullOrdersArrayAsync()
         {
-            var data = await _db.Orders.Include(x => x.Timbers).ToArrayAsync();
-
-            List<OrderModel> result = new List<OrderModel>();
-            if (data != null)
+            try
             {
-                foreach (var order in data)
+                var ordersArray = await _db.Orders
+                .Include(x => x.OrderPositions)
+                .Select(x => new OrderModel
                 {
-                    result.Add(
-                        new OrderModel
-                        {
-                            OrderId = order.OrderId,
-                            CustomerId = order.CustomerId,
-                            Id = order.Id,
-                            CreatedAt = order.CreatedAt,
-                            IsCompleted = order.IsCompleted,
-                            CompletedAt = order.CompletedAt,
-                            IsVerified = order.IsVerified,
-                            IsPaid = order.IsPaid,
-                            Timbers = order.Timbers,
-                        }
-                        );
-                }
+                    OrderPositions = x.OrderPositions,
+                    CompletedAt = x.CompletedAt,
+                    CreatedAt = x.CreatedAt,
+                    CustomerId = x.CustomerId,
+                    Status = x.Status,
+                    Id = x.Id,
+                })
+                .ToArrayAsync();
 
-                return result.ToArray();
+                return ordersArray;
             }
-
-            return null;
+            catch (ArgumentNullException)
+            {
+                return [];
+            }
         }
 
         public async Task<OrderModel[]?> GetOrdersOfCustomerAsync(GetOrdersDTO model)
         {
-            var customer = await _db.Customers.Where(x => x.TelegramID == model.Customer_TelegramID).FirstOrDefaultAsync();
-            if (customer != null)
+            try
             {
-                var data = await _db.Orders.Where(x => x.CustomerId == customer.CustomerId && x.IsPaid == false).Include(x => x.Timbers).ToArrayAsync();
+                var ordersArray = await _db.Orders
+                .Where(x => x.CustomerId == model.CustomerTelegramId)               
+                .ToArrayAsync();
 
-                List<OrderModel> result = [];
-                if (data != null)
-                {
-                    foreach (var order in data)
-                    {
-                        result.Add(
-                            new OrderModel
-                            {
-                                OrderId = order.OrderId,
-                                CustomerId = order.CustomerId,
-                                Id = order.Id,
-                                CreatedAt = order.CreatedAt,
-                                IsCompleted = order.IsCompleted,
-                                CompletedAt = order.CompletedAt,
-                                IsVerified = order.IsVerified,
-                                IsPaid = order.IsPaid,
-                                Timbers = order.Timbers,
-                            });
-                    }
-
-                    return result.ToArray();
-                }
+                return [];
             }
-            else
+            catch (ArgumentNullException)
             {
-                return Array.Empty<OrderModel>();
+                return [];
             }
-
-
-            return Array.Empty<OrderModel>();
         }
 
         public Task<ExecResultModel> UpdateAsync()
@@ -225,110 +173,113 @@ namespace WoodWebAPI.Services
 
         public async Task<ExecResultModel> VerifyOrderByAdminAsync(VerifyOrderDTO model)
         {
-            if (model != null)
-            {
-                    var orders = await _db.Orders.Where(x => x.IsVerified == false && x.Id == model.OrderId).FirstOrDefaultAsync();
+            throw new NotImplementedException();
+            //if (model != null)
+            //{
+            //    var orders = await _db.Orders.Where(x => x.IsVerified == false && x.Id == model.OrderId).FirstOrDefaultAsync();
 
-                    if (orders != null) 
-                    {
-                        orders.IsVerified = true;
-                        await _db.SaveChangesAsync();
+            //    if (orders != null)
+            //    {
+            //        orders.IsVerified = true;
+            //        await _db.SaveChangesAsync();
 
-                        return new ExecResultModel()
-                        {
-                            Success = true,
-                            Message = "Заказ принят в работу",
-                        };
-                    }
-                    else
-                    {
-                        return new ExecResultModel()
-                        {
-                            Success = false,
-                            Message = "Выбранный заказ не пренадлежит указанному пользователю или уже подтверждён",
-                        };
-                    }
-            }
-            else
-            {
-                return new ExecResultModel()
-                {
-                    Success = false,
-                    Message = "Входная модель оказалась пуста",
-                };
-            }
+            //        return new ExecResultModel()
+            //        {
+            //            Success = true,
+            //            Message = "Заказ принят в работу",
+            //        };
+            //    }
+            //    else
+            //    {
+            //        return new ExecResultModel()
+            //        {
+            //            Success = false,
+            //            Message = "Выбранный заказ не пренадлежит указанному пользователю или уже подтверждён",
+            //        };
+            //    }
+            //}
+            //else
+            //{
+            //    return new ExecResultModel()
+            //    {
+            //        Success = false,
+            //        Message = "Входная модель оказалась пуста",
+            //    };
+            //}
         }
 
         public async Task<ExecResultModel> CompleteOrderByAdminAsync(VerifyOrderDTO model)
         {
-            if (model != null)
-            {
-                var orders = await _db.Orders.Where(x => x.IsVerified == true && x.Id == model.OrderId).FirstOrDefaultAsync();
+            throw  new NotFiniteNumberException();
+            //if (model != null)
+            //{
+            //    var orders = await _db.Orders.Where(x => x.IsVerified == true && x.Id == model.OrderId).FirstOrDefaultAsync();
 
-                if (orders != null)
-                {
-                    orders.IsCompleted = true;
-                    await _db.SaveChangesAsync();
+            //    if (orders != null)
+            //    {
+            //        orders.IsCompleted = true;
+            //        await _db.SaveChangesAsync();
 
-                    return new ExecResultModel()
-                    {
-                        Success = true,
-                        Message = "Заказ завершён",
-                    };
-                }
-                else
-                {
-                    return new ExecResultModel()
-                    {
-                        Success = false,
-                        Message = "Выбранный заказ не пренадлежит указанному пользователю или уже подтверждён",
-                    };
-                }
-            }
-            else
-            {
-                return new ExecResultModel()
-                {
-                    Success = false,
-                    Message = "Входная модель оказалась пуста",
-                };
-            }
+            //        return new ExecResultModel()
+            //        {
+            //            Success = true,
+            //            Message = "Заказ завершён",
+            //        };
+            //    }
+            //    else
+            //    {
+            //        return new ExecResultModel()
+            //        {
+            //            Success = false,
+            //            Message = "Выбранный заказ не пренадлежит указанному пользователю или уже подтверждён",
+            //        };
+            //    }
+            //}
+            //else
+            //{
+            //    return new ExecResultModel()
+            //    {
+            //        Success = false,
+            //        Message = "Входная модель оказалась пуста",
+            //    };
+            //}
         }
 
         public async Task<ExecResultModel> PaidSuccessfullyAsync(VerifyOrderDTO model)
         {
-            if (model != null)
-            {
-                var orders = await _db.Orders.Where(x => x.IsVerified == true && x.IsCompleted == true && x.IsPaid ==false && x.Id == model.OrderId).FirstOrDefaultAsync();
+            throw new NotImplementedException();
+            //if (model != null)
+            //{
+            //    var orders = await _db.Orders.Where(x => x.IsVerified == true && x.IsCompleted == true && x.IsPaid == false && x.Id == model.OrderId).FirstOrDefaultAsync();
 
-                if (orders != null)
-                {
-                    orders.IsPaid = true;
-                    await _db.SaveChangesAsync();
+            //    if (orders != null)
+            //    {
+            //        orders.IsPaid = true;
+            //        await _db.SaveChangesAsync();
 
-                    return new ExecResultModel()
-                    {
-                        Success = true,
-                        Message = "Заказ закрыт",
-                    };
-                }
-                else
-                {
-                    return new ExecResultModel()
-                    {
-                        Success = false,
-                        Message = "Выбранный заказ не пренадлежит указанному пользователю или уже подтверждён",
-                    };
-                }
-            }
-            else
-            {
-                return new ExecResultModel()
-                {
-                    Success = false,
-                    Message = "Входная модель оказалась пуста",
-                };
-            }
+            //        return new ExecResultModel()
+            //        {
+            //            Success = true,
+            //            Message = "Заказ закрыт",
+            //        };
+            //    }
+            //    else
+            //    {
+            //        return new ExecResultModel()
+            //        {
+            //            Success = false,
+            //            Message = "Выбранный заказ не пренадлежит указанному пользователю или уже подтверждён",
+            //        };
+            //    }
+            //}
+            //else
+            //{
+            //    return new ExecResultModel()
+            //    {
+            //        Success = false,
+            //        Message = "Входная модель оказалась пуста",
+            //    };
+            //}
         }
     }
 }

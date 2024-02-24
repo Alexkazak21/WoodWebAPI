@@ -56,12 +56,12 @@ public class StartCommand : ICommand
                 {
                     try
                     {
-                        if (long.Parse(customer.TelegramId) == chatId)
+                        if (customer.TelegramId == chatId)
                         {
                             userExist = true;
                         }
                     }
-                    catch (FormatException ex)
+                    catch (FormatException)
                     {
                         TelegramWorker.Logger
                              .LogWarning("Startup command\n" +
