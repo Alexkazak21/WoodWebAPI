@@ -27,29 +27,37 @@ public partial class WoodDBContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Order>()
+             .HasOne(x => x.Customer)
+             .WithMany(x => x.Orders)
+             .HasPrincipalKey(x => x.TelegramID);
+
         modelBuilder.Entity<EtalonTimber>()
             .Property(x => x.LengthInMeter)
             .HasConversion(
-                x => x.ToString(),
-                x => decimal.Parse(x));
+            x => Convert.ToDouble(x),
+            x => Convert.ToDecimal(x)
+            );
 
         modelBuilder.Entity<EtalonTimber>()
             .Property(x => x.DiameterInСantimeter)
             .HasConversion(
-                x => x.ToString(),
-                x => decimal.Parse(x));
-
+            x => Convert.ToDouble(x),
+            x => Convert.ToDecimal(x)
+            );
         modelBuilder.Entity<OrderPosition>()
             .Property(x => x.LengthInMeter)
             .HasConversion(
-                x => x.ToString(),
-                x => decimal.Parse(x));
+            x => Convert.ToDouble(x),
+            x => Convert.ToDecimal(x)
+            );
 
         modelBuilder.Entity<OrderPosition>()
             .Property(x => x.DiameterInCantimeter)
             .HasConversion(
-                x => x.ToString(),
-                x => decimal.Parse(x));
+            x => Convert.ToDouble(x),
+            x => Convert.ToDecimal(x)
+            );
 
         base.OnModelCreating(modelBuilder);
     }

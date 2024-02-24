@@ -91,10 +91,10 @@ namespace WoodWebAPI.Services
 
                 return Task.FromResult<GetCustomerAdmin[]?>([.. customersArray]);
             }
-            catch(ArgumentNullException)
+            catch (ArgumentNullException)
             {
                 return Task.FromResult<GetCustomerAdmin[]?>([.. customersArray]);
-            }            
+            }
         }
         public Task<GetCustomerModel[]?> GetFullCustomerInfoAsync()
         {
@@ -113,37 +113,14 @@ namespace WoodWebAPI.Services
 
                 return Task.FromResult<GetCustomerModel[]?>([.. customersArray]);
             }
-            catch(ArgumentNullException)
+            catch (ArgumentNullException)
             {
                 return Task.FromResult<GetCustomerModel[]?>([.. customersArray]);
             }
-            
+
         }
 
-        public Task<GetAdminDTO[]?> GetAdminListAsync()
-        {
-            var adminsArray = new List<GetAdminDTO>();
-
-            try
-            {
-                adminsArray.AddRange(_db.IsAdmin
-                .Select(x => new GetAdminDTO
-                {
-                    AdminRole = x.AdminRole,
-                    CreatedAt = x.CreatedAt,
-                    Id = x.Id,
-                    TelegramId = x.TelegramId,
-                    TelegramUsername = x.TelegramUsername,
-                })
-                .DefaultIfEmpty(new()));
-
-                return Task.FromResult<GetAdminDTO[]?>([.. adminsArray]);
-            }
-            catch (ArgumentNullException)
-            {
-                return Task.FromResult<GetAdminDTO[]?>([.. adminsArray]);
-            }
-        }
+        // работа с администраторами
 
         public async Task<ExecResultModel> UpdateAsync(UpdateCustomerDTO model)
         {
@@ -179,6 +156,31 @@ namespace WoodWebAPI.Services
                     Success = false,
                     Message = "Пользователь не найден",
                 };
+            }
+        }
+
+        public Task<GetAdminDTO[]?> GetAdminListAsync()
+        {
+            var adminsArray = new List<GetAdminDTO>();
+
+            try
+            {
+                adminsArray.AddRange(_db.IsAdmin
+                .Select(x => new GetAdminDTO
+                {
+                    AdminRole = x.AdminRole,
+                    CreatedAt = x.CreatedAt,
+                    Id = x.Id,
+                    TelegramId = x.TelegramId,
+                    TelegramUsername = x.TelegramUsername,
+                })
+                .DefaultIfEmpty(new()));
+
+                return Task.FromResult<GetAdminDTO[]?>([.. adminsArray]);
+            }
+            catch (ArgumentNullException)
+            {
+                return Task.FromResult<GetAdminDTO[]?>([.. adminsArray]);
             }
         }
 

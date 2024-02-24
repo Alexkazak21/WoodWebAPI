@@ -66,7 +66,9 @@ public class AddOrderPositionCommand : ICommand
                                 "\n        диаметр:длина" +
                                 "\nДиаметр в сантиметрах, а длина в метрах с точностью до 1см" +
                                 "\n\tНапример  56:1.58" +
-                                "\nОтправьте как ОТВЕТ на это сообщение" +
+                                "\n\nВНИМАНИЕ! Если введённые вами значения не соотвертсвуют ГОСТ 2708-75, " +
+                                "то они будут округлены до соответствующих значений" +
+                                "\n\nОтправьте как ОТВЕТ на это сообщение" +
                                 $"\nЗаказ - {orderId}",
                                 messageId: messageId,
                                 replyMarkup: null,
@@ -108,9 +110,9 @@ public class AddOrderPositionCommand : ICommand
 
                                         var content = JsonContent.Create(addTimber);
 
-                                        var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Timber/AddTimberToOrder", content);
+                                        var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/OrderPosition/AddOrderPositionToOrder", content, cancellationToken);
 
-                                        var responce = await request.Content.ReadAsStringAsync();
+                                        var responce = await request.Content.ReadAsStringAsync(cancellationToken);
                                         var result = JsonConvert.DeserializeObject<ExecResultModel>(responce);
                                         if (result != null && result.Success)
                                         {
@@ -118,8 +120,8 @@ public class AddOrderPositionCommand : ICommand
                                                 chatId: chatid,
                                                 text: $"{result.Message}",
                                                 replyMarkup: new InlineKeyboardMarkup(
-                                                   InlineKeyboardButton.WithCallbackData("Вернуться к заказу", $"/show_order:{orderId}"))
-                                                );
+                                                   InlineKeyboardButton.WithCallbackData("Вернуться к заказу", $"/show_order:{orderId}")),
+                                                cancellationToken: cancellationToken);
                                         }
                                         else if (result != null && !result.Success)
                                         {
@@ -127,8 +129,21 @@ public class AddOrderPositionCommand : ICommand
                                                 chatId: chatid,
                                                 text: $"{result.Message}",
                                                 replyMarkup: new InlineKeyboardMarkup(
-                                                   InlineKeyboardButton.WithCallbackData("Вернуться к заказу", $"/show_order:{orderId}"))
-                                                );
+                                                   InlineKeyboardButton.WithCallbackData("Вернуться к заказу", $"/show_order:{orderId}")),
+                                                cancellationToken: cancellationToken);
+                                        }
+                                        else
+                                        {
+                                            await Client.SendTextMessageAsync(
+                                                chatId: chatid,
+                                                text: $"Что-то пошло не так, повторите попытку позже",
+                                                replyMarkup: new InlineKeyboardMarkup(
+                                                   InlineKeyboardButton.WithCallbackData("Вернуться к заказу", $"/show_order:{orderId}")),
+                                                cancellationToken: cancellationToken);
+
+                                            string message = $"{request.StatusCode}\t{request.RequestMessage.RequestUri}";
+
+                                            TelegramWorker.Logger.LogWarning(message);
                                         }
                                     }
                                 }

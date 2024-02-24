@@ -34,7 +34,7 @@ namespace WoodWebAPI.Services
                 new Order
                 {
                     CreatedAt = DateTime.UtcNow,
-                    CustomerId = customer.TelegramID,
+                    CustomerTelegramId = model.CustomerTelegramId,
                     Status = OrderStatus.NewOrder,
                     CompletedAt = DateTime.MinValue,
                     OrderPositions = [],
@@ -62,7 +62,7 @@ namespace WoodWebAPI.Services
         {
             try
             {
-                var archived = await _db.Orders.Where(x => x.CustomerId == data.CustomerId && x.Id == data.Id).FirstAsync();
+                var archived = await _db.Orders.Where(x => x.CustomerTelegramId == data.CustomerTelegramId && x.Id == data.Id).FirstAsync();
             }
             catch (ArgumentNullException)
             {
@@ -93,7 +93,7 @@ namespace WoodWebAPI.Services
             {
                 try
                 {
-                    var data = await _db.Orders.Where(x => x.CustomerId == model.CustomerTelegramId && x.Id == model.OrderId && x.Status == OrderStatus.Verivied).FirstAsync();
+                    var data = await _db.Orders.Where(x => x.CustomerTelegramId == model.CustomerTelegramId && x.Id == model.OrderId && x.Status == OrderStatus.Verivied).FirstAsync();
                     return await Archive(data);
                 }
                 catch (ArgumentNullException)
@@ -119,7 +119,7 @@ namespace WoodWebAPI.Services
             }
             else
             {
-                var data = await _db.Orders.Where(x => x.CustomerId == model.CustomerTelegramId && x.Id == model.OrderId).FirstAsync();
+                var data = await _db.Orders.Where(x => x.CustomerTelegramId == model.CustomerTelegramId && x.Id == model.OrderId).FirstAsync();
                 return await Archive(data);
             }
         }
@@ -135,7 +135,7 @@ namespace WoodWebAPI.Services
                     OrderPositions = x.OrderPositions,
                     CompletedAt = x.CompletedAt,
                     CreatedAt = x.CreatedAt,
-                    CustomerId = x.CustomerId,
+                    CustomerId = x.CustomerTelegramId,
                     Status = x.Status,
                     Id = x.Id,
                 })
@@ -154,10 +154,21 @@ namespace WoodWebAPI.Services
             try
             {
                 var ordersArray = await _db.Orders
-                .Where(x => x.CustomerId == model.CustomerTelegramId)               
+                .Where(x => x.CustomerTelegramId == model.CustomerTelegramId)
+                .Include(x => x.OrderPositions)
+                .Select(x => new OrderModel 
+                {
+                    CompletedAt = x.CompletedAt,
+                    CreatedAt = x.CreatedAt,
+                    CustomerId = x.CustomerTelegramId,
+                    Status = x.Status,
+                    Id= x.Id,
+                    OrderPositions = x.OrderPositions
+
+                })                
                 .ToArrayAsync();
 
-                return [];
+                return ordersArray;
             }
             catch (ArgumentNullException)
             {

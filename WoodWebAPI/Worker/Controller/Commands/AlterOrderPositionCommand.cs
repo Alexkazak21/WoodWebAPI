@@ -1,6 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Newtonsoft.Json;
 using Telegram.Bot;
+using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using WoodWebAPI.Data.Models.OrderPosition;
@@ -17,7 +18,12 @@ namespace WoodWebAPI.Worker.Controller.Commands
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                if (update != null)
+                if (update == null)
+                {
+                    return;
+                }
+
+                try
                 {
                     var chatId = update.CallbackQuery.From.Id;
                     var comandParts = update.CallbackQuery.Data.Split(':');
@@ -93,14 +99,21 @@ namespace WoodWebAPI.Worker.Controller.Commands
 
                         if (timberId == timberList.OrderPositions[0].OrderPositionId)
                         {
-                            InlineKeyboardMarkup replyMarkup = null;
+                            InlineKeyboardMarkup replyMarkup;
                             if (timberList.OrderPositions.Count > 1)
                             {
                                 replyMarkup = new InlineKeyboardMarkup(
                                 new[]
                                 {
+                                    new[]
+                                    {
                                     InlineKeyboardButton.WithCallbackData("Изменить",$"/alter_timber:{orderId}:{timberList.OrderPositions[currentTimber].OrderPositionId}:true"),
                                     InlineKeyboardButton.WithCallbackData(">",$"/alter_timber:{orderId}:{timberList.OrderPositions[currentTimber + 1].OrderPositionId}")
+                                    },
+                                    new[]
+                                    {
+                                    InlineKeyboardButton.WithCallbackData("К заказам","/main")
+                                    }
                                 });
                             }
                             else
@@ -208,6 +221,13 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                                     cancellationToken: cancellationToken);
                     }
                 }
+                catch(ApiRequestException badException)
+                {
+                    TelegramWorker.Logger.LogWarning($"Source: {badException.Source}\n" +
+                        $"\tError code:{badException.ErrorCode}\n" +
+                        $"\tMessage:\n\t{badException.Message}");
+                }
+                
             }
         }
 
@@ -217,7 +237,7 @@ namespace WoodWebAPI.Worker.Controller.Commands
 
             var content = JsonContent.Create(
                 new GetOrderPositionsByOrderIdDTO()
-                {                    
+                {
                     OrderId = orderId,
                     TelegramId = chatId,
                 }

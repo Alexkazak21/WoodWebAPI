@@ -69,14 +69,12 @@ namespace WoodWebAPI.Worker.Controller.Commands
 
                                         var content = JsonContent.Create(getTimbers);
 
-                                        var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Timber/GetTotalVolumeOfOrder", content);
+                                        var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/OrderPosition/GetTotalVolumeOfOrder", content);
 
                                         var responce = await request.Content.ReadAsStringAsync();
-                                        var result = JsonConvert.DeserializeObject<ExecResultModel>(responce);
-                                        if (result != null && result.Success)
-                                        {
-                                            volume = double.Parse(result.Message);
-                                        }
+                                        var result = JsonConvert.DeserializeObject<double>(responce);
+                                        
+                                        volume = result;
                                     }
 
                                     var orderIsVerified = order.Status == OrderStatus.Verivied ? "ДА" : "НЕТ";

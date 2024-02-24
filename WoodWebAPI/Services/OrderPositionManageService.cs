@@ -20,7 +20,7 @@ public class OrderPositionManageService : IOrderPositionManage
         try
         {
             var order = await _db.Orders
-                .Where(x => x.CustomerId == model.TelegramId && x.Id == model.OrderId)
+                .Where(x => x.CustomerTelegramId == model.TelegramId && x.Id == model.OrderId)
                 .Include(x => x.OrderPositions)
                 .Select(x => new OrderPositionsModel
                 {
@@ -33,7 +33,6 @@ public class OrderPositionManageService : IOrderPositionManage
                         VolumeInMeter3 = y.VolumeInMeter3
                     }).ToList()
                 })
-                .DefaultIfEmpty(new())
                 .FirstAsync();
 
             return order;
@@ -60,22 +59,24 @@ public class OrderPositionManageService : IOrderPositionManage
         try
         {
             minLength = await _db.EtalonTimberList.Select(x => x.LengthInMeter).MinAsync();
-            maxLength = await _db.EtalonTimberList.Select(x => x.LengthInMeter).MaxAsync(); ;
+            maxLength = await _db.EtalonTimberList.Select(x => x.LengthInMeter).MaxAsync();
             minDiameter = await _db.EtalonTimberList.Select(x => x.DiameterInСantimeter).MinAsync();
-            maxDiameter = await _db.EtalonTimberList.Select(x => x.DiameterInСantimeter).MaxAsync(); ;
+            maxDiameter = await _db.EtalonTimberList.Select(x => x.DiameterInСantimeter).MaxAsync();
 
             var etalonOrderPosition = await _db.EtalonTimberList
                 .Where(x => x.LengthInMeter >= model.Length)
                 .Where(x => x.DiameterInСantimeter >= model.Diameter)
-                .OrderBy(x => x.VolumeInMeter3)
-                .DefaultIfEmpty(new())
+                .OrderBy(x => x.LengthInMeter)
+                .ThenBy(x => x.DiameterInСantimeter)
+                .ThenBy(x => x.VolumeInMeter3)
                 .FirstAsync();
 
             // сохранение данных о добавленном дереве  и изменившемся заказе в базу
 
-            await _db.OrderPositions.AddAsync(
+            var timber = await _db.OrderPositions.AddAsync(
                 new OrderPosition
                 {
+                    OrderId = model.OrderId,
                     DiameterInCantimeter = etalonOrderPosition.DiameterInСantimeter,
                     LengthInMeter = etalonOrderPosition.LengthInMeter,
                     VolumeInMeter3 = etalonOrderPosition.VolumeInMeter3,
@@ -119,7 +120,7 @@ public class OrderPositionManageService : IOrderPositionManage
         try
         {
             double totalVolume = await _db.Orders
-                .Where(x => x.CustomerId == model.TelegramId && x.Id == model.OrderId).Include(x => x.OrderPositions)
+                .Where(x => x.CustomerTelegramId == model.TelegramId && x.Id == model.OrderId).Include(x => x.OrderPositions)
                 .Select(x => x.OrderPositions)
                 .Select(x => x.Sum(y => y.VolumeInMeter3)).FirstAsync();
 

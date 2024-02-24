@@ -1,12 +1,13 @@
-﻿namespace WoodWebAPI.Data.Entities;
+﻿using Azure.Core.Pipeline;
+using System.Runtime.CompilerServices;
 
-public partial class OrderPosition
+namespace WoodWebAPI.Data.Entities;
+
+public class OrderPosition
 {
     public int Id { get; set; }
-
-    public decimal LengthInMeter { get; set; }
-
+    public required int OrderId { get; set; }
     public decimal DiameterInCantimeter { get; set; }
-
+    public decimal LengthInMeter { get; set; }
     public double VolumeInMeter3 { get; set; }
 }
