@@ -7,8 +7,10 @@ using WoodWebAPI.Data.Models.Customer;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
-public class StartCommand : ICommand
+public class StartCommand(IWorkerCreds workerCreds,ILogger<StartCommand> logger) : ICommand
 {
+    private readonly IWorkerCreds _workerCreds = workerCreds;
+    private readonly ILogger<StartCommand>? _logger = logger;
     public TelegramBotClient Client => TelegramWorker.API;
 
     public string Name => "/start";
@@ -45,7 +47,7 @@ public class StartCommand : ICommand
         var userExist = false;
         using (HttpClient client = new HttpClient())
         {
-            HttpResponseMessage response = await client.PostAsync($"{TelegramWorker.BaseUrl}/api/Customer/GetCustomers", new StringContent(""));
+            HttpResponseMessage response = await client.PostAsync($"{_workerCreds.BaseURL}/api/Customer/GetCustomers", new StringContent(""));
 
             if (response.IsSuccessStatusCode)
             {
@@ -63,8 +65,7 @@ public class StartCommand : ICommand
                     }
                     catch (FormatException)
                     {
-                        TelegramWorker.Logger
-                             .LogWarning("Startup command\n" +
+                        _logger.LogWarning("Startup command\n" +
                             "\tНевозможно распарсить идентификатор, скорее всего он не равен типу long");
                     }
 

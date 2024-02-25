@@ -7,11 +7,11 @@ namespace WoodWebAPI.Worker.Controller
 {
     [Route("/")]
     [ApiController]
-    public class BotController : ControllerBase
+    public class BotController(ILogger<BotController> logger,IWorkerCreds workerCreds) : ControllerBase
     {
         private readonly TelegramBotClient _bot = TelegramWorker.API;
-        private readonly ILogger<TelegramWorker> _logger = TelegramWorker.Logger;
-        private readonly UpdateDistributor<CommandExecutor> _distributor = new UpdateDistributor<CommandExecutor>();
+        private readonly ILogger<BotController>? _logger = logger;
+        private readonly UpdateDistributor<CommandExecutor> _distributor = new(workerCreds);
 
         [HttpPost]
         public async void Post(Update update, CancellationToken cancellationToken)

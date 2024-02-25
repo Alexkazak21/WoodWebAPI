@@ -13,6 +13,7 @@ public class TelegramWorker : BackgroundService
 
     private readonly string _telegtamToken;
 
+    private readonly IWorkerCreds _telegtamWorkerCreds;
 
     public static string BaseUrl { get; private set; }
     public static TelegramBotClient? API { get; set; }
@@ -22,9 +23,9 @@ public class TelegramWorker : BackgroundService
     public static decimal PriceForM3 { get; private set; }
     public static string PaymentToken { get; private set; }
 
-    public static decimal MinPrice {  get; private set; }
+    public static decimal MinPrice { get; private set; }
 
-    public TelegramWorker(ILogger<TelegramWorker> logger, TelegtamWorkerCreds workerCreds)
+    public TelegramWorker(ILogger<TelegramWorker> logger, IWorkerCreds workerCreds)
     {
         _logger = logger;
         _telegtamToken = workerCreds.TelegramToken;
@@ -34,7 +35,7 @@ public class TelegramWorker : BackgroundService
         AdminList.Add(new IsAdmin()
         {
             AdminRole = 1,
-            CreatedAt = new DateTime(1997,04,10, 10, 51, 54),
+            CreatedAt = new DateTime(1997, 04, 10, 10, 51, 54),
             Id = 0,
             TelegramUsername = workerCreds.MainAdmin,
             TelegramId = workerCreds.TelegramId,
@@ -42,98 +43,83 @@ public class TelegramWorker : BackgroundService
         PriceForM3 = workerCreds.PriceForM3;
         PaymentToken = workerCreds.PaymentToken;
         MinPrice = workerCreds.MinPrice;
+        _telegtamWorkerCreds = workerCreds;
     }
+    /*
+    private readonly ILogger<TelegramWorker> _logger;
 
+    private readonly TelegramWorkerCreds _telegtamWorkerCreds;
+
+    private readonly static List<IsAdmin> AdminList = [];
+
+    public static TelegramBotClient? API {  get; private set; }
+    public TelegramWorker(ILogger<TelegramWorker> logger, TelegramWorkerCreds workerCreds)
+    { 
+        _logger = logger;
+        AdminList.Add(new IsAdmin()
+        {
+            AdminRole = 1,
+            CreatedAt = new DateTime(1997,04,10, 10, 51, 54),
+            Id = 0,
+            TelegramUsername = workerCreds.MainAdmin,
+            TelegramId = workerCreds.TelegramId,
+        });
+        _telegtamWorkerCreds = workerCreds;
+
+        //initialisation of telegram bot api
+        var botToken = _telegtamWorkerCreds.TelegramToken;
+        API = new TelegramBotClient(botToken);
+    }
+    */
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        //initialisation of telegram bot api
-        var botToken = _telegtamToken;
-        API = new TelegramBotClient(botToken);
-
         //setting telegram webhook
 
-        await API.SetWebhookAsync(_ngrokURL);
+        await API.SetWebhookAsync(_telegtamWorkerCreds.NgrokURL, cancellationToken: cancellationToken);
 
         // testing telegram connection
-        var me = await API.GetMeAsync();
+        var me = await API.GetMeAsync(cancellationToken: cancellationToken);
         Console.WriteLine($"My name is {me.FirstName}.");
 
         //  Checking kub records
-        ConsumedMethods activateDbConnection = new ConsumedMethods();
+        ConsumedMethods activateDbConnection = new(_telegtamWorkerCreds);
         await activateDbConnection.GetAsync(cancellationToken);
-        var dbContainsKub = await activateDbConnection.GetKubStatus();
-        Logger.LogInformation($"\n{dbContainsKub.Message}\n");
+        var dbContainsKub = await activateDbConnection.GetKubStatus(cancellationToken);
+        _logger.LogInformation($"\n{dbContainsKub.Message}\n");
 
-        await API.DeleteMyCommandsAsync(BotCommandScope.Default());
+        await API.DeleteMyCommandsAsync(BotCommandScope.Default(), cancellationToken: cancellationToken);
 
-        Logger.LogInformation($"\nРабота на адресе - {_ngrokURL}\n");
+        _logger.LogInformation($"\nРабота на адресе - {_telegtamWorkerCreds.NgrokURL}\n");
 
         var commands = new List<BotCommand>()
         {
-            new BotCommand()
+            new()
             {
                 Command = "start",
                 Description = "В начало"
             },
-            new BotCommand()
+            new()
             {
                 Command = "login",
                 Description = "Авторизация"
             },
-            new BotCommand()
+            new()
             {
                 Command = "main",
                 Description = "В главное меню"
             },
-            new BotCommand()
+            new()
             {
                 Command = "cancel",
                 Description = "Отменить действие"
             },
-            new BotCommand()
+            new()
             {
                 Command = "clear",
                 Description = "Удалить сообщения"
             }
         };
 
-        await API.SetMyCommandsAsync(commands,BotCommandScope.Default());
+        await API.SetMyCommandsAsync(commands, BotCommandScope.Default(), cancellationToken: cancellationToken);
     }
-}
-
-public class TelegtamWorkerCreds
-{
-    private readonly string _telegtamToken;
-    private readonly string _ngrokURL;
-    private readonly string _baseUrl;
-    private readonly string _mainAdmin;
-    private readonly string? _telegramId;
-    private readonly decimal _priceForM3;
-    private readonly decimal _minPrice;
-    private readonly string _paymentToken;
-
-    public string TelegramToken { get => _telegtamToken; }
-    public string NgrokURL { get => _ngrokURL; }
-    public string BaseURL { get => _baseUrl; }
-    public string MainAdmin { get => _mainAdmin; }
-    public string? TelegramId { get => _telegramId; }
-
-    public decimal PriceForM3 { get => _priceForM3; }
-
-    public string PaymentToken { get => _paymentToken; }
-
-    public decimal MinPrice {  get => _minPrice; }
-
-    public TelegtamWorkerCreds(string telegramToken, string ngrokURL, string baseURL, string mainAdmin, string? telegramId, string price, string paymentToken, string minPrice)
-    {
-        _telegramId = telegramId;
-        _baseUrl = baseURL;
-        _mainAdmin = mainAdmin;
-        _telegtamToken = telegramToken;
-        _ngrokURL = ngrokURL;
-        decimal.TryParse(price, out _priceForM3);
-        _paymentToken = paymentToken;
-        _minPrice = Convert.ToDecimal(minPrice,CultureInfo.InvariantCulture);
-    }
-
 }

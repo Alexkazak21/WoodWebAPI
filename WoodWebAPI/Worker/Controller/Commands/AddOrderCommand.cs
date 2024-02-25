@@ -8,8 +8,9 @@ using WoodWebAPI.Data.Models.Order;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
-public class AddOrderCommand : ICommand
+public class AddOrderCommand(TelegramWorkerCreds workerCreds) : ICommand
 {
+    private readonly TelegramWorkerCreds _workerCreds = workerCreds;
     public TelegramBotClient Client => TelegramWorker.API;
 
     public string Name => "/new_order";
@@ -33,7 +34,7 @@ public class AddOrderCommand : ICommand
                     };
                     var content = JsonContent.Create(getOrders);
 
-                    var responce = await client.PostAsync($"{TelegramWorker.BaseUrl}/api/Order/GetOrdersOfCustomer", content, cancellationToken);
+                    var responce = await client.PostAsync($"{_workerCreds.BaseURL}/api/Order/GetOrdersOfCustomer", content, cancellationToken);
 
                     orderList = JsonConvert.DeserializeObject<OrderModel[]?>(await responce.Content.ReadAsStringAsync(cancellationToken));
                 }

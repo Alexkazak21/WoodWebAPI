@@ -6,8 +6,27 @@ using Telegram.Bot.Types;
 namespace WoodWebAPI.Worker.Controller.Commands;
 
 
-public class CommandExecutor : IUpdateHandler
+public class CommandExecutor(IWorkerCreds workerCreds) : IUpdateHandler
 {
+    private readonly IWorkerCreds _workerCreds = workerCreds;
+    private List<ICommand> commands =
+        [
+            new StartCommand(),
+            new CancelCommand(),
+            new SignUpCommand(),
+            new LoginCommand(),
+            new MainCommand(),
+            new AddOrderCommand(),
+            new DeleteOrderCommand(),
+            new ShowOrderCommand(),
+            new AddOrderPositionCommand(),
+            new ClearCommand(),
+            new AlterOrderPositionCommand(),
+            new RegAdminCommand(),
+            new OrderManageCommand(),
+            new AdminManageCommand(),
+            new PaymentCommand(),
+        ];
     public async Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
@@ -93,36 +112,14 @@ public class CommandExecutor : IUpdateHandler
             }
         }
     }
+    //public CommandExecutor()
+    //{
+    //    //var type = AppDomain.CurrentDomain.GetAssemblies()
+    //    //    .SelectMany(x => x.GetTypes())
+    //    //    .Where(x => x.IsClass)
+    //    //    .Where(x => typeof(ICommand).IsAssignableFrom(x))
+    //    //    .Select(x => x.FullName).ToList();
 
-
-    private List<ICommand> commands;
-
-    public CommandExecutor()
-    {
-        //var type = AppDomain.CurrentDomain.GetAssemblies()
-        //    .SelectMany(x => x.GetTypes())
-        //    .Where(x => x.IsClass)
-        //    .Where(x => typeof(ICommand).IsAssignableFrom(x))
-        //    .Select(x => x.FullName).ToList();
-
-        commands = new List<ICommand>()
-        {
-
-            new StartCommand(),
-            new CancelCommand(),
-            new SignUpCommand(),
-            new LoginCommand(),
-            new MainCommand(),
-            new AddOrderCommand(),
-            new DeleteOrderCommand(),
-            new ShowOrderCommand(),
-            new AddOrderPositionCommand(),
-            new ClearCommand(),
-            new AlterOrderPositionCommand(),
-            new RegAdminCommand(),
-            new OrderManageCommand(),
-            new AdminManageCommand(),
-            new PaymentCommand(),
-        };
-    }
+        
+    //}
 }

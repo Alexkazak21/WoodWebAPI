@@ -26,7 +26,3 @@ public enum OrderStatus
     Paid,
     Archived
 }
-
-//public void OrderStatusChange(OrderStatus oldStatus, OrderStatus[] newStatus)
-//{
-//}

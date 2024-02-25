@@ -8,10 +8,12 @@ namespace WoodWebAPI.Worker
     public class UpdateDistributor<T> where T : IUpdateHandler, new()
     {
         private Dictionary<long, T> listeners;
+        private readonly IWorkerCreds _creds;
 
-        public UpdateDistributor()
+        public UpdateDistributor(IWorkerCreds workerCreds)
         {
             listeners = new Dictionary<long, T>();
+            _creds = workerCreds;
         }
 
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
