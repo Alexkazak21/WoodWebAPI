@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
@@ -10,6 +11,7 @@ using WoodWebAPI.Auth;
 using WoodWebAPI.Data;
 using WoodWebAPI.Services;
 using WoodWebAPI.Worker;
+using WoodWebAPI.Worker.Controller.Commands;
 
 namespace WoodWebAPI
 {
@@ -119,27 +121,42 @@ namespace WoodWebAPI
             builder.Services.AddScoped<ICustomerManage, CustomerManageService>();
             builder.Services.AddScoped<IOrderManage, OrderManageService>();
             builder.Services.AddScoped<IOrderPositionManage, OrderPositionManageService>();
-            
+            builder.Services.AddSingleton<IWorkerCreds, TelegramWorkerCreds>();
+            builder.Services.AddScoped<ICommand,StartCommand>();
+            builder.Services.AddScoped<ICommand,CancelCommand>();
+            builder.Services.AddScoped<ICommand, SignUpCommand>();
+            builder.Services.AddScoped<ICommand, LoginCommand>();
+            builder.Services.AddScoped<ICommand, MainCommand>();
+            builder.Services.AddScoped<ICommand, AddOrderCommand>();
+            builder.Services.AddScoped<ICommand, DeleteOrderCommand>();
+            builder.Services.AddScoped<ICommand, ShowOrderCommand>();
+            builder.Services.AddScoped<ICommand, AddOrderPositionCommand>();
+            builder.Services.AddScoped<ICommand, ClearCommand>();
+            builder.Services.AddScoped<ICommand, AlterOrderPositionCommand>();
+            builder.Services.AddScoped<ICommand, RegAdminCommand>();
+            builder.Services.AddScoped<ICommand, OrderManageCommand>();
+            builder.Services.AddScoped<ICommand, AdminManageCommand>();
+            builder.Services.AddScoped<ICommand, PaymentCommand>();
 
-            var workingCreds = new TelegramWorkerCreds(
-                telegramToken: configuration.GetValue<string>("TelegramToken") ?? throw new ArgumentNullException("TelegramToken", "Telegtam Token field must be specified"),
-                ngrokURL: configuration.GetSection("ngrok").GetValue<string>("URL") ?? throw new ArgumentNullException("NGROK URL", " NGROK URL must be specified"),
-                baseURL: configuration.GetSection("profiles").GetSection("http").GetValue<string>("applicationUrl") ?? throw new ArgumentNullException("BaseUrl", "BaseUrl field must be specified"),
-                mainAdmin: configuration.GetSection("admin").GetValue<string>("Username") ?? throw new ArgumentNullException("Username", "Username must be declared"),
-                telegramId: configuration.GetSection("admin").GetValue<string>("TelegramId") ?? throw new ArgumentException("TelegramId", "TelegramId must be declared"),
-                price: configuration.GetValue<string>("price") ?? throw new ArgumentException("Price","Price must be defined"),
-                paymentToken: configuration.GetValue<string>("paymentToken") ?? throw new ArgumentException("paymentToken", "paymentToken must be defined"),
-                minPrice: configuration.GetValue<string>("minPrice") ?? throw new ArgumentException("minPrice", "minPrice must be defined")
-                );
+            builder.Services.AddLogging();
+
+            //var workingCreds = new TelegramWorkerCreds(
+            //    telegramToken: configuration.GetValue<string>("TelegramToken") ?? throw new ArgumentNullException("TelegramToken", "Telegtam Token field must be specified"),
+            //    ngrokURL: configuration.GetSection("ngrok").GetValue<string>("URL") ?? throw new ArgumentNullException("NGROK URL", " NGROK URL must be specified"),
+            //    baseURL: configuration.GetSection("profiles").GetSection("http").GetValue<string>("applicationUrl") ?? throw new ArgumentNullException("BaseUrl", "BaseUrl field must be specified"),
+            //    mainAdmin: configuration.GetSection("admin").GetValue<string>("Username") ?? throw new ArgumentNullException("Username", "Username must be declared"),
+            //    telegramId: configuration.GetSection("admin").GetValue<string>("TelegramId") ?? throw new ArgumentException("TelegramId", "TelegramId must be declared"),
+            //    price: configuration.GetValue<string>("price") ?? throw new ArgumentException("Price","Price must be defined"),
+            //    paymentToken: configuration.GetValue<string>("paymentToken") ?? throw new ArgumentException("paymentToken", "paymentToken must be defined"),
+            //    minPrice: configuration.GetValue<string>("minPrice") ?? throw new ArgumentException("minPrice", "minPrice must be defined")
+            //    );
 
             // Adding Background service worker to work with Telegram
             builder.Services.AddHostedService(options => new TelegramWorker(
                 options.GetRequiredService<ILogger<TelegramWorker>>(),
-                workingCreds
-                ));
-
-            builder.Services.AddSingleton<IWorkerCreds, TelegramWorkerCreds>();
-            builder.Services.AddLogging();
+                options.GetRequiredService<IWorkerCreds>()                
+                ));            
+            
 
             var app = builder.Build();
 

@@ -8,8 +8,9 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace WoodWebAPI.Worker.Controller.Commands
 {
-    public class SignUpCommand : ICommand
+    public class SignUpCommand(IWorkerCreds workerCreds) : ICommand
     {
+        private readonly IWorkerCreds _workerCreds = workerCreds;
         public TelegramBotClient Client => TelegramWorker.API;
 
         public CommandExecutor Executor { get; }
@@ -45,7 +46,7 @@ namespace WoodWebAPI.Worker.Controller.Commands
 
                     var contentCustomer = JsonContent.Create(customerDTO);
 
-                    var resultCustomer = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Customer/CreateCustomers", contentCustomer);
+                    var resultCustomer = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Customer/CreateCustomers", contentCustomer);
                     //var resultUser = await httpClient.PostAsJsonAsync("http://localhost:5550/api/Authenticate/register", contentUser);
 
                     if (resultCustomer.IsSuccessStatusCode) //&& resultUser.IsSuccessStatusCode)

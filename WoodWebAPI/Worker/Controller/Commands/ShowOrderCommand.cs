@@ -9,8 +9,9 @@ using WoodWebAPI.Data.Models.OrderPosition;
 
 namespace WoodWebAPI.Worker.Controller.Commands
 {
-    public class ShowOrderCommand : ICommand
+    public class ShowOrderCommand(IWorkerCreds workerCreds) : ICommand
     {
+        private readonly IWorkerCreds _workerCreds = workerCreds;
         public TelegramBotClient Client => TelegramWorker.API;
 
         public string Name => "/show_order";
@@ -39,18 +40,18 @@ namespace WoodWebAPI.Worker.Controller.Commands
                     {
                         chatid = update.Message.Chat.Id;
 
-                        userExist = await new CommonChecks().CheckCustomer(chatid, cancellationToken);
+                        userExist = await new CommonChecks(_workerCreds).CheckCustomer(chatid, cancellationToken);
                     }
                     else if (update.Type == UpdateType.CallbackQuery)
                     {
                         chatid = update.CallbackQuery.From.Id;
 
-                        userExist = await new CommonChecks().CheckCustomer(chatid, cancellationToken);
+                        userExist = await new CommonChecks(_workerCreds).CheckCustomer(chatid, cancellationToken);
                     }
 
                     if (userExist && chatid != -1 && orderId != -1)
                     {
-                        var orders = await new CommonChecks().CheckOrdersOfCustomer(chatid, cancellationToken);
+                        var orders = await new CommonChecks(_workerCreds).CheckOrdersOfCustomer(chatid, cancellationToken);
 
                         if (orders != null)
                         {
@@ -69,7 +70,7 @@ namespace WoodWebAPI.Worker.Controller.Commands
 
                                         var content = JsonContent.Create(getTimbers);
 
-                                        var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/OrderPosition/GetTotalVolumeOfOrder", content);
+                                        var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/OrderPosition/GetTotalVolumeOfOrder", content);
 
                                         var responce = await request.Content.ReadAsStringAsync();
                                         var result = JsonConvert.DeserializeObject<double>(responce);
@@ -83,8 +84,8 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                     {
                                         InlineKeyboardMarkup replyMarkup = null;
 
-                                        var ammountToPay = decimal.Round(TelegramWorker.PriceForM3 * Convert.ToDecimal(volume), 2, MidpointRounding.AwayFromZero) > TelegramWorker.MinPrice ?
-                                                           decimal.Round(TelegramWorker.PriceForM3 * Convert.ToDecimal(volume), 2, MidpointRounding.AwayFromZero) : TelegramWorker.MinPrice;
+                                        var ammountToPay = decimal.Round(_workerCreds.PriceForM3 * Convert.ToDecimal(volume), 2, MidpointRounding.AwayFromZero) > _workerCreds.MinPrice ?
+                                                           decimal.Round(_workerCreds.PriceForM3 * Convert.ToDecimal(volume), 2, MidpointRounding.AwayFromZero) : _workerCreds.MinPrice;
 
                                         if (volume >= 0)
                                         {

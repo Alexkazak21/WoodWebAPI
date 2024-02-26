@@ -7,16 +7,17 @@ using WoodWebAPI.Data.Models.Customer;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
-public class StartCommand(IWorkerCreds workerCreds,ILogger<StartCommand> logger) : ICommand
+public class StartCommand(IWorkerCreds workerCreds) : ICommand
 {
     private readonly IWorkerCreds _workerCreds = workerCreds;
-    private readonly ILogger<StartCommand>? _logger = logger;
+    private readonly ILogger<StartCommand> _logger;
     public TelegramBotClient Client => TelegramWorker.API;
 
     public string Name => "/start";
 
     public async Task Execute(Update update, CancellationToken cancellationToken)
     {
+        //_logger.LogInformation("Start command");
         if (!cancellationToken.IsCancellationRequested)
         {
             long chatId = -1;

@@ -10,8 +10,9 @@ using WoodWebAPI.Data.Entities;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
-public class PaymentCommand : ICommand
+public class PaymentCommand(IWorkerCreds workerCreds) : ICommand
 {
+    private readonly IWorkerCreds _workerCreds = workerCreds;
     public TelegramBotClient Client => TelegramWorker.API;
 
     public string Name => "/payment";
@@ -29,7 +30,7 @@ public class PaymentCommand : ICommand
                 {
                     var telegramId = long.Parse(commandParts[1]);
                     var orderId = int.Parse(update.PreCheckoutQuery.InvoicePayload);
-                    var orders = await new CommonChecks().CheckOrdersOfCustomer(telegramId, cancellationToken);
+                    var orders = await new CommonChecks(_workerCreds).CheckOrdersOfCustomer(telegramId, cancellationToken);
 
                     if (orders.Where(x => x.Id == orderId && x.Status == OrderStatus.Completed).First() != null)
                     {
@@ -41,7 +42,7 @@ public class PaymentCommand : ICommand
                     }
                 }
 
-                var totalSumToPay = decimal.Parse(commandParts[2]) > TelegramWorker.MinPrice ? decimal.Parse(commandParts[2]) : TelegramWorker.MinPrice;
+                var totalSumToPay = decimal.Parse(commandParts[2]) > _workerCreds.MinPrice ? decimal.Parse(commandParts[2]) : _workerCreds.MinPrice;
 
                 await Client.SendInvoiceAsync(
                     chatId: chatId,
@@ -49,7 +50,7 @@ public class PaymentCommand : ICommand
                     description: "Заказ на распил древисины завершён в полном объёме." +
                     "\nПродолжая ВЫ соглашаетесь с условиями оплаты",
                     payload: $"{commandParts[3]}",
-                    providerToken: TelegramWorker.PaymentToken,
+                    providerToken: _workerCreds.PaymentToken,
                     currency: "BYN",
                     prices: new[]
                     {
@@ -62,7 +63,7 @@ public class PaymentCommand : ICommand
             {
                 var telegramId = update.Message.From.Id;
                 var orderId = int.Parse(update.Message.SuccessfulPayment.InvoicePayload);
-                var orders = await new CommonChecks().CheckOrdersOfCustomer(telegramId, cancellationToken);
+                var orders = await new CommonChecks(_workerCreds).CheckOrdersOfCustomer(telegramId, cancellationToken);
 
                 if (orders.Where(x => x.Id == orderId && x.Status == OrderStatus.Completed).First() != null)
                 {
@@ -75,7 +76,7 @@ public class PaymentCommand : ICommand
                                 OrderId = orderId,
                             });
 
-                        var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Order/PaidSuccessfull", content);
+                        var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/PaidSuccessfull", content);
                         var responce = JsonConvert.DeserializeObject<ExecResultModel>(await request.Content.ReadAsStringAsync());
                         if (!responce.Success)
                         {

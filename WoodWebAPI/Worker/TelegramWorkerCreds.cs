@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 
+
 namespace WoodWebAPI.Worker;
 
 public class TelegramWorkerCreds : IWorkerCreds
@@ -25,15 +26,25 @@ public class TelegramWorkerCreds : IWorkerCreds
 
     public decimal MinPrice { get => _minPrice; }
 
-    public TelegramWorkerCreds(string telegramToken, string ngrokURL, string baseURL, string mainAdmin, string? telegramId, string price, string paymentToken, string minPrice)
+    public TelegramWorkerCreds()
     {
-        _telegramId = telegramId;
-        _baseUrl = baseURL;
-        _mainAdmin = mainAdmin;
-        _telegtamToken = telegramToken;
-        _ngrokURL = ngrokURL;
-        _ = decimal.TryParse(price, out _priceForM3);
-        _paymentToken = paymentToken;
-        _minPrice = Convert.ToDecimal(minPrice, CultureInfo.InvariantCulture);
+        var builder = WebApplication.CreateBuilder();
+        builder.Configuration.Sources.Clear();
+        IConfigurationRoot configuration = builder
+                .Configuration
+                .AddJsonFile("appsettings.json", false)
+                .AddJsonFile("appsettings.Development.json", false)
+                .AddJsonFile("appsettings.local.json", true)
+                .AddJsonFile("Properties\\launchSettings.json")
+                .Build();
+
+        _telegramId = configuration.GetSection("admin").GetValue<string>("TelegramId") ?? throw new ArgumentException("TelegramId", "TelegramId must be declared");
+        _baseUrl = configuration.GetSection("profiles").GetSection("http").GetValue<string>("applicationUrl") ?? throw new ArgumentNullException("BaseUrl", "BaseUrl field must be specified");
+        _mainAdmin = configuration.GetSection("admin").GetValue<string>("Username") ?? throw new ArgumentNullException("Username", "Username must be declared");
+        _telegtamToken = configuration.GetValue<string>("TelegramToken") ?? throw new ArgumentNullException("TelegramToken", "Telegtam Token field must be specified");
+        _ngrokURL = configuration.GetSection("ngrok").GetValue<string>("URL") ?? throw new ArgumentNullException("NGROK URL", " NGROK URL must be specified");
+        _ = decimal.TryParse(configuration.GetValue<string>("price") ?? throw new ArgumentException("Price", "Price must be defined"), out _priceForM3);
+        _paymentToken = configuration.GetValue<string>("paymentToken") ?? throw new ArgumentException("paymentToken", "paymentToken must be defined");
+        _minPrice = Convert.ToDecimal(configuration.GetValue<string>("minPrice") ?? throw new ArgumentException("minPrice", "minPrice must be defined"), CultureInfo.InvariantCulture);
     }
 }

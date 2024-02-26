@@ -42,11 +42,11 @@ namespace WoodWebAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> GetTotalVolumeOfOrderAsync(GetOrderPositionsByOrderIdDTO model)
+        public async Task<double> GetTotalVolumeOfOrderAsync(GetOrderPositionsByOrderIdDTO model)
         {
             var data = await _entityService.GetTotalVolumeOfOrderAsync(model);
 
-            return Ok(data);
+            return data;
         }
 
         [HttpPost]

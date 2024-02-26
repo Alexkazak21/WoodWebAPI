@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Order;
 using WoodWebAPI.Services;
 
@@ -87,42 +88,42 @@ namespace WoodWebAPI.Controllers
 
         //[Authorize]
         [HttpPost]
-        public async Task<IActionResult> VerifyOrderByAdmin(VerifyOrderDTO model)
+        public async Task<ExecResultModel> VerifyOrderByAdmin(VerifyOrderDTO model)
         {
             var data = await _entityService.VerifyOrderByAdminAsync(model);
 
             if (data.Success)
             {
-                return Ok(data);
+                return data;
             }
 
-            return BadRequest(data);
+            return data;
         }
 
         [HttpPost]
-        public async Task<IActionResult> CompleteOrderByAdmin(VerifyOrderDTO model)
+        public async Task<ExecResultModel> CompleteOrderByAdmin(VerifyOrderDTO model)
         {
             var data = await _entityService.CompleteOrderByAdminAsync(model);
 
             if (data.Success)
             {
-                return Ok(data);
+                return data;
             }
 
-            return BadRequest(data);
+            return data;
         }
 
         [HttpPost]
-        public async Task<IActionResult> PaidSuccessfull(VerifyOrderDTO model)
+        public async Task<ExecResultModel> PaidSuccessfull(VerifyOrderDTO model)
         {
             var data = await _entityService.PaidSuccessfullyAsync(model);
 
             if (data.Success)
             {
-                return Ok(data);
+                return data;
             }
 
-            return BadRequest(data);
+            return data;
         }
     }
 }

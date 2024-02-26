@@ -9,8 +9,9 @@ using WoodWebAPI.Data.Models.OrderPosition;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
-public class AddOrderPositionCommand : ICommand
+public class AddOrderPositionCommand(IWorkerCreds workerCreds) : ICommand
 {
+    private readonly IWorkerCreds _workerCreds = workerCreds;
     public TelegramBotClient Client => TelegramWorker.API;
 
     public string Name => "/add_timber";
@@ -39,13 +40,13 @@ public class AddOrderPositionCommand : ICommand
                 {
                     chatid = update.Message.Chat.Id;
                     messageId = update.Message.MessageId;
-                    userExist = await new CommonChecks().CheckCustomer(chatid, cancellationToken);
+                    userExist = await new CommonChecks(_workerCreds).CheckCustomer(chatid, cancellationToken);
                 }
                 else if (update.Type == UpdateType.CallbackQuery)
                 {
                     chatid = update.CallbackQuery.From.Id;
                     messageId = update.CallbackQuery.Message.MessageId;
-                    userExist = await new CommonChecks().CheckCustomer(chatid, cancellationToken);
+                    userExist = await new CommonChecks(_workerCreds).CheckCustomer(chatid, cancellationToken);
                 }
 
 
@@ -90,7 +91,7 @@ public class AddOrderPositionCommand : ICommand
 
                     if (userExist && chatid != -1 && orderId != -1 && diameter != -1 && timberLength != -1)
                     {
-                        var orders = await new CommonChecks().CheckOrdersOfCustomer(chatid, cancellationToken);
+                        var orders = await new CommonChecks(_workerCreds).CheckOrdersOfCustomer(chatid, cancellationToken);
 
                         if (orders != null)
                         {
@@ -110,7 +111,7 @@ public class AddOrderPositionCommand : ICommand
 
                                         var content = JsonContent.Create(addTimber);
 
-                                        var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/OrderPosition/AddOrderPositionToOrder", content, cancellationToken);
+                                        var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/OrderPosition/AddOrderPositionToOrder", content, cancellationToken);
 
                                         var responce = await request.Content.ReadAsStringAsync(cancellationToken);
                                         var result = JsonConvert.DeserializeObject<ExecResultModel>(responce);

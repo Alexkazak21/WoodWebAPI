@@ -8,24 +8,23 @@ namespace WoodWebAPI.Worker.Controller.Commands;
 
 public class CommandExecutor(IWorkerCreds workerCreds) : IUpdateHandler
 {
-    private readonly IWorkerCreds _workerCreds = workerCreds;
     private List<ICommand> commands =
         [
-            new StartCommand(),
+            new StartCommand(workerCreds),
             new CancelCommand(),
-            new SignUpCommand(),
-            new LoginCommand(),
-            new MainCommand(),
-            new AddOrderCommand(),
-            new DeleteOrderCommand(),
-            new ShowOrderCommand(),
-            new AddOrderPositionCommand(),
+            new SignUpCommand(workerCreds),
+            new LoginCommand(workerCreds),
+            new MainCommand(workerCreds),
+            new AddOrderCommand(workerCreds),
+            new DeleteOrderCommand(workerCreds),
+            new ShowOrderCommand(workerCreds),
+            new AddOrderPositionCommand(workerCreds),
             new ClearCommand(),
-            new AlterOrderPositionCommand(),
-            new RegAdminCommand(),
-            new OrderManageCommand(),
-            new AdminManageCommand(),
-            new PaymentCommand(),
+            new AlterOrderPositionCommand(workerCreds),
+            new RegAdminCommand(workerCreds),
+            new OrderManageCommand(workerCreds),
+            new AdminManageCommand(workerCreds),
+            new PaymentCommand(workerCreds),
         ];
     public async Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
     {

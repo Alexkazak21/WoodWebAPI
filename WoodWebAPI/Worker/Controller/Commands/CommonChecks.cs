@@ -6,8 +6,9 @@ using WoodWebAPI.Data.Models.OrderPosition;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
-public class CommonChecks
+public class CommonChecks(IWorkerCreds workerCreds)
 {
+    private readonly IWorkerCreds _workerCreds = workerCreds;
     public async Task<OrderModel[]?> CheckOrdersOfCustomer(long chatid, CancellationToken cancellationToken)
     {
         using (HttpClient httpClient = new HttpClient())
@@ -18,7 +19,7 @@ public class CommonChecks
                     CustomerTelegramId = chatid,
                 });
 
-            var responce = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Order/GetOrdersOfCustomer", content, cancellationToken);
+            var responce = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/GetOrdersOfCustomer", content, cancellationToken);
             var responseJsonContent = await responce.Content.ReadAsStringAsync(cancellationToken);
             return JsonConvert.DeserializeObject<OrderModel[]?>(responseJsonContent);
         }
@@ -28,7 +29,7 @@ public class CommonChecks
     {
         using (HttpClient httpClient = new HttpClient())
         {
-            var request = await httpClient.GetAsync($"{TelegramWorker.BaseUrl}/api/Customer/GetAdminList");
+            var request = await httpClient.GetAsync($"{_workerCreds.BaseURL}/api/Customer/GetAdminList");
             var responce = await request.Content.ReadAsStringAsync();
             if(request.IsSuccessStatusCode)
             {
@@ -39,7 +40,7 @@ public class CommonChecks
         };
     }
 
-    public async Task<ExecResultModel> GetVolume(long chatid, int orderid)
+    public async Task<double> GetVolume(long chatid, int orderid)
     {
         using (HttpClient httpClient = new HttpClient()) 
         {
@@ -48,9 +49,9 @@ public class CommonChecks
                 TelegramId = chatid,
                 OrderId = orderid
             });
-            var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Timber/GetTotalVolumeOfOrder",content);
+            var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/OrderPosition/GetTotalVolumeOfOrder",content);
             var responseVolume = await request.Content.ReadAsStringAsync();
-            var volume = JsonConvert.DeserializeObject<ExecResultModel>(responseVolume);
+            var volume = JsonConvert.DeserializeObject<double>(responseVolume);
             return volume;
         }
     }
@@ -60,7 +61,7 @@ public class CommonChecks
         {
             using (HttpClient httpClient = new HttpClient())
             {
-                var responce = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Customer/GetCustomers", new StringContent(""), cancellationToken);
+                var responce = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Customer/GetCustomers", new StringContent(""), cancellationToken);
                 var responseJsonContent = await responce.Content.ReadAsStringAsync(cancellationToken);
                 GetCustomerModel[] customers = JsonConvert.DeserializeObject<GetCustomerModel[]>(responseJsonContent);
 

@@ -6,8 +6,9 @@ using WoodWebAPI.Data.Models.Customer;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
-public class AdminManageCommand : ICommand
+public class AdminManageCommand(IWorkerCreds workerCreds) : ICommand
 {
+    private readonly IWorkerCreds _workerCreds = workerCreds;
     public TelegramBotClient Client => TelegramWorker.API;
 
     public string Name => "/admin_manage";
@@ -177,7 +178,7 @@ public class AdminManageCommand : ICommand
         List<GetCustomerAdmin> availableCustomersToAdmin = new();
 
         using HttpClient httpClient = new HttpClient();
-        var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Customer/GetCustomerByAdmin", new StringContent(""));
+        var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Customer/GetCustomerByAdmin", new StringContent(""));
         List<GetCustomerAdmin> responce = null;
         if (request.IsSuccessStatusCode)
         {

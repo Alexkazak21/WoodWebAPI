@@ -6,8 +6,9 @@ using WoodWebAPI.Auth;
 
 namespace WoodWebAPI.Worker.Controller.Commands
 {
-    public class RegAdminCommand : ICommand
+    public class RegAdminCommand(IWorkerCreds workerCreds) : ICommand
     {
+        private readonly IWorkerCreds _workerCreds = workerCreds;
         public TelegramBotClient Client => TelegramWorker.API;
 
         public string Name => "/reg_admin";
@@ -40,7 +41,7 @@ namespace WoodWebAPI.Worker.Controller.Commands
                     };
 
                     var content = JsonContent.Create(registerAdminCred);
-                    var requestAuth = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Authenticate/register-admin", content);
+                    var requestAuth = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Authenticate/register-admin", content);
                     var responseAuth = JsonConvert.DeserializeObject<Response>(await requestAuth.Content.ReadAsStringAsync());
                     
 

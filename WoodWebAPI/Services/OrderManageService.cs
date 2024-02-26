@@ -3,6 +3,7 @@ using WoodWebAPI.Data;
 using WoodWebAPI.Data.Entities;
 using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Order;
+using WoodWebAPI.Worker;
 
 namespace WoodWebAPI.Services
 {
@@ -156,16 +157,16 @@ namespace WoodWebAPI.Services
                 var ordersArray = await _db.Orders
                 .Where(x => x.CustomerTelegramId == model.CustomerTelegramId)
                 .Include(x => x.OrderPositions)
-                .Select(x => new OrderModel 
+                .Select(x => new OrderModel
                 {
                     CompletedAt = x.CompletedAt,
                     CreatedAt = x.CreatedAt,
                     CustomerId = x.CustomerTelegramId,
                     Status = x.Status,
-                    Id= x.Id,
+                    Id = x.Id,
                     OrderPositions = x.OrderPositions
 
-                })                
+                })
                 .ToArrayAsync();
 
                 return ordersArray;
@@ -184,44 +185,49 @@ namespace WoodWebAPI.Services
 
         public async Task<ExecResultModel> VerifyOrderByAdminAsync(VerifyOrderDTO model)
         {
-            throw new NotImplementedException();
-            //if (model != null)
-            //{
-            //    var orders = await _db.Orders.Where(x => x.IsVerified == false && x.Id == model.OrderId).FirstOrDefaultAsync();
+            try
+            {
+                var order = await _db.Orders.Where(x => x.Status == OrderStatus.NewOrder && x.Id == model.OrderId).FirstAsync();
+                var isValid = ConsumedMethods.IsValidTransition(order.Status, OrderStatus.Verivied);
+                if (isValid) 
+                {
+                    order.Status = OrderStatus.Verivied;
+                    await _db.SaveChangesAsync();
 
-            //    if (orders != null)
-            //    {
-            //        orders.IsVerified = true;
-            //        await _db.SaveChangesAsync();
+                    return new ExecResultModel()
+                    {
+                        Success = true,
+                        Message = "Заказ принят в работу",
+                    };
+                }
 
-            //        return new ExecResultModel()
-            //        {
-            //            Success = true,
-            //            Message = "Заказ принят в работу",
-            //        };
-            //    }
-            //    else
-            //    {
-            //        return new ExecResultModel()
-            //        {
-            //            Success = false,
-            //            Message = "Выбранный заказ не пренадлежит указанному пользователю или уже подтверждён",
-            //        };
-            //    }
-            //}
-            //else
-            //{
-            //    return new ExecResultModel()
-            //    {
-            //        Success = false,
-            //        Message = "Входная модель оказалась пуста",
-            //    };
-            //}
+                return new ExecResultModel()
+                {
+                    Success = false,
+                    Message = $"Невозможно стенить статус заказа на {OrderStatus.Verivied}",
+                };
+            }
+            catch (ArgumentNullException)
+            {
+                return new ExecResultModel
+                {
+                    Success = false,
+                    Message = "Данные не найдены"
+                };
+            }
+            catch (DbUpdateException)
+            {
+                return new ExecResultModel
+                {
+                    Success = false,
+                    Message = "БД занята, попробуйте позже"
+                };
+            }
         }
 
         public async Task<ExecResultModel> CompleteOrderByAdminAsync(VerifyOrderDTO model)
         {
-            throw  new NotFiniteNumberException();
+            throw new NotFiniteNumberException();
             //if (model != null)
             //{
             //    var orders = await _db.Orders.Where(x => x.IsVerified == true && x.Id == model.OrderId).FirstOrDefaultAsync();

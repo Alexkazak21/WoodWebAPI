@@ -8,8 +8,9 @@ using WoodWebAPI.Data.Models.Order;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
-public class DeleteOrderCommand : ICommand
+public class DeleteOrderCommand(IWorkerCreds workerCreds) : ICommand
 {
+    private readonly IWorkerCreds _workerCreds = workerCreds;
     public TelegramBotClient Client => TelegramWorker.API;
 
     public string Name => "/delete_order";
@@ -38,13 +39,13 @@ public class DeleteOrderCommand : ICommand
                 {
                     chatid = update.Message.Chat.Id;
 
-                    userExist = await new CommonChecks().CheckCustomer(chatid, cancellationToken);
+                    userExist = await new CommonChecks(_workerCreds).CheckCustomer(chatid, cancellationToken);
                 }
                 else if (update.Type == UpdateType.CallbackQuery)
                 {
                     chatid = update.CallbackQuery.From.Id;
 
-                    userExist = await new CommonChecks().CheckCustomer(chatid, cancellationToken);
+                    userExist = await new CommonChecks(_workerCreds).CheckCustomer(chatid, cancellationToken);
                 }
 
                 if (userExist && chatid != -1 && orderId > 0)
@@ -58,7 +59,7 @@ public class DeleteOrderCommand : ICommand
                                 OrderId = orderId,
                             });
 
-                        var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Order/DeleteOrder", content, cancellationToken);
+                        var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/DeleteOrder", content, cancellationToken);
                         
                         var response = await request.Content.ReadAsStringAsync(cancellationToken);
 
@@ -107,7 +108,7 @@ public class DeleteOrderCommand : ICommand
                 }
                 else if (orderId <= 0 )
                 {
-                    var orders = await new CommonChecks().CheckOrdersOfCustomer(chatid, cancellationToken);
+                    var orders = await new CommonChecks(_workerCreds).CheckOrdersOfCustomer(chatid, cancellationToken);
 
                     if (orders != null && orders.Length > 0)
                     {

@@ -6,12 +6,13 @@ using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Customer;
 using WoodWebAPI.Data.Models.Order;
 using WoodWebAPI.Data.Entities;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Telegram.Bot.Exceptions;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
-public class OrderManageCommand : ICommand
+public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
 {
+    private readonly IWorkerCreds _workerCreds = workerCreds;
     public TelegramBotClient Client => TelegramWorker.API;
 
     public string Name => "/order_manage";
@@ -168,7 +169,7 @@ public class OrderManageCommand : ICommand
         ExecResultModel completeResult = null;
         using (HttpClient httpClient = new HttpClient())
         {
-            var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Order/CompleteOrderByAdmin", content);
+            var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/CompleteOrderByAdmin", content);
             var responce = await request.Content.ReadAsStringAsync();
             completeResult = JsonConvert.DeserializeObject<ExecResultModel>(responce);
         }
@@ -177,7 +178,7 @@ public class OrderManageCommand : ICommand
         {
             using (HttpClient httpClient = new HttpClient())
             {
-                var responce = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Customer/GetCustomers", new StringContent(""));
+                var responce = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Customer/GetCustomers", new StringContent(""));
                 var responseJsonContent = await responce.Content.ReadAsStringAsync();
                 GetCustomerModel[] customersArray = JsonConvert.DeserializeObject<GetCustomerModel[]>(responseJsonContent);
 
@@ -185,10 +186,10 @@ public class OrderManageCommand : ICommand
                 {
                     if (customer.Orders.FirstOrDefault(x => x.Id == orderId) != null)
                     {
-                        var volume = await new CommonChecks().GetVolume(customer.TelegramId, orderId);
+                        var volume = await new CommonChecks(_workerCreds).GetVolume(customer.TelegramId, orderId);
 
-                        var ammountToPay = decimal.Round(TelegramWorker.PriceForM3 * decimal.Parse(volume.Message), 2, MidpointRounding.AwayFromZero) > TelegramWorker.MinPrice ?
-                                            decimal.Round(TelegramWorker.PriceForM3 * decimal.Parse(volume.Message), 2, MidpointRounding.AwayFromZero) : TelegramWorker.MinPrice;
+                        var ammountToPay = decimal.Round(_workerCreds.PriceForM3 * decimal.Parse(volume.ToString()), 2, MidpointRounding.AwayFromZero) > _workerCreds.MinPrice ?
+                                            decimal.Round(_workerCreds.PriceForM3 * decimal.Parse(volume.ToString()), 2, MidpointRounding.AwayFromZero) : _workerCreds.MinPrice;
                         await Client.SendTextMessageAsync(
                         chatId: customer.TelegramId,
                         text: $"{completeResult.Message}\n" +
@@ -209,6 +210,33 @@ public class OrderManageCommand : ICommand
         }
         return completeResult;
     }
+    private async Task<ExecResultModel> VerifyOrderAsync(Update update, int orderId, CancellationToken cancellationToken = default)
+    {
+        var content = JsonContent.Create(new VerifyOrderDTO
+        {
+            OrderId = orderId,
+        });
+        try
+        {
+            using (HttpClient httpClient = new HttpClient())
+            {
+                var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/VerifyOrderByAdmin", content);
+                var responce = await request.Content.ReadAsStringAsync();
+                var result = JsonConvert.DeserializeObject<ExecResultModel>(responce);
+                return result;
+            }
+        }
+        catch (Exception ex)
+        {
+            TelegramWorker.Logger.LogWarning($"{ex.Message}");
+            return new ExecResultModel
+            {
+                Success = false,
+                Message = "не получилось"
+            };
+        }
+    }
+
     private async Task ShowAllOrders(Update update, int? orderId = null, bool? verified = null, CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested) return;
@@ -226,7 +254,7 @@ public class OrderManageCommand : ICommand
             if (update.Type == Telegram.Bot.Types.Enums.UpdateType.Message)
             {
                 customerId = update.Message.From.Id;
-                CustomerIsAdmin = await new CommonChecks().CheckCustomer(customerId, cancellationToken);
+                CustomerIsAdmin = await new CommonChecks(_workerCreds).CheckCustomer(customerId, cancellationToken);
             }
             else if (update.Type == Telegram.Bot.Types.Enums.UpdateType.CallbackQuery)
             {
@@ -245,7 +273,7 @@ public class OrderManageCommand : ICommand
             {
                 var content = new StringContent("");
 
-                var responce = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Order/GetFullOrdersList", content, cancellationToken);
+                var responce = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/GetFullOrdersList", content, cancellationToken);
                 var responseJsonContent = await responce.Content.ReadAsStringAsync(cancellationToken);
                 orders = JsonConvert.DeserializeObject<OrderModel[]?>(responseJsonContent).ToList();
             }
@@ -264,27 +292,12 @@ public class OrderManageCommand : ICommand
             {
                 await SendTemplateAsync(orders, chatId, messageId, orderId: orderId, cancellationToken: cancellationToken);
             }
-
         }
 
         return;
     }
 
-    private async Task<ExecResultModel> VerifyOrderAsync(Update update, int orderId, CancellationToken cancellationToken = default)
-    {
-        var content = JsonContent.Create(new VerifyOrderDTO
-        {
-            OrderId = orderId,
-        });
-
-        using (HttpClient httpClient = new HttpClient())
-        {
-            var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Order/VerifyOrderByAdmin", content);
-            var responce = await request.Content.ReadAsStringAsync();
-            var result = JsonConvert.DeserializeObject<ExecResultModel>(responce);
-            return result;
-        }
-    }
+    
 
     private async Task SendTemplateAsync(List<OrderModel>? orders, long chatId, int messageId, bool? verified = null, int? orderId = null, CancellationToken cancellationToken = default)
     {
@@ -293,46 +306,46 @@ public class OrderManageCommand : ICommand
         bool isCompleted = false;
         bool isPaid = false;
 
-        if(orders != null && orderId != null) 
+        try
         {
-            orderId = orders[0].Id;
-
-            switch (orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Status)
+            if (orders != null && orderId != null)
             {
-                case OrderStatus.Verivied:
-                    {
-                        isVerified = true;
-                    }
-                    break;
-                case OrderStatus.Completed:
-                    {
-                        isVerified = true;
-                        isCompleted = true;
-                    }
-                    break;
-                case OrderStatus.Paid:
-                    {
-                        isPaid = true;
-                        isCompleted = true;
-                        isVerified = true;
-                    }
-                    break;
-
-            }
-        }
-
-        // список заказов пуст
-        if (orders == null || orders.Count == 0)
-        {
-            try
-            {
-                await Client.EditMessageTextAsync(
-                    chatId: chatId,
-                    messageId: messageId,
-                    text: "Пока нет никаких заказов (",
-                    replyMarkup: new InlineKeyboardMarkup(
-                        new[]
+                switch (orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Status)
+                {
+                    case OrderStatus.Verivied:
                         {
+                            isVerified = true;
+                        }
+                        break;
+                    case OrderStatus.Completed:
+                        {
+                            isVerified = true;
+                            isCompleted = true;
+                        }
+                        break;
+                    case OrderStatus.Paid:
+                        {
+                            isPaid = true;
+                            isCompleted = true;
+                            isVerified = true;
+                        }
+                        break;
+
+                }
+            }
+
+            // список заказов пуст
+            if (orders == null || orders.Count == 0)
+            {
+                try
+                {
+                    await Client.EditMessageTextAsync(
+                        chatId: chatId,
+                        messageId: messageId,
+                        text: "Пока нет никаких заказов (",
+                        replyMarkup: new InlineKeyboardMarkup(
+                            new[]
+                            {
                                 new[]
                                 {
                                     InlineKeyboardButton.WithCallbackData("Назад", "/order_manage"),
@@ -341,61 +354,61 @@ public class OrderManageCommand : ICommand
                                 {
                                     InlineKeyboardButton.WithCallbackData("Главное меню", "/main"),
                                 }
-                        }),
-                    cancellationToken: cancellationToken
-                );
-            }
-            catch (Telegram.Bot.Exceptions.ApiRequestException ex)
-            {
-                TelegramWorker.Logger.LogError(ex.Message);
-            }
-        }
-
-        InlineKeyboardButton proccessButton = new("");
-        // установка корректной кнопки действия с заказом
-        if (orders.Count > 0)
-        {
-            if (orderId != null)
-            {
-                if (isVerified == false)
-                {
-                    proccessButton = InlineKeyboardButton.WithCallbackData("Приять в работу", $"/order_manage:verify:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}");
+                            }),
+                        cancellationToken: cancellationToken
+                    );
                 }
-                else
+                catch (Telegram.Bot.Exceptions.ApiRequestException ex)
                 {
-                    proccessButton = InlineKeyboardButton.WithCallbackData("Завершить заказ", $"/order_manage:complete:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}");
-                }
-            }
-            else
-            {
-                if (isVerified == false)
-                {
-                    proccessButton = InlineKeyboardButton.WithCallbackData("Приять в работу", $"/order_manage:verify:{orders[0].Id}");
-                }
-                else
-                {
-                    proccessButton = InlineKeyboardButton.WithCallbackData("Завершить заказ", $"/order_manage:complete:{orders[0].Id}");
+                    TelegramWorker.Logger.LogError(ex.Message);
                 }
             }
 
-            // отображение целого списк заказов без навигации, без признака Verified || Verified = false
-            if (orders != null && orderId == null && (verified == null || verified == false))
+            InlineKeyboardButton proccessButton = new("");
+            // установка корректной кнопки действия с заказом
+            if (orders.Count > 0)
             {
-                var volumeTotal = await new CommonChecks().GetVolume(chatId, orders[0].Id);
-                if (orders.Count == 1)
+                if (orderId != null)
                 {
-                    await Client.EditMessageTextAsync(
-                        chatId: chatId,
-                        messageId: messageId,
-                        text: $"Заказ № {orders[0].Id}\n" +
-                        $"Создан {orders[0].CreatedAt}\n" +
-                        $"Объёмом: {volumeTotal.Message} m3\n" +
-                        $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
-                        $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
-                        $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
-                        replyMarkup: new InlineKeyboardMarkup(
-                            new[]
-                            {
+                    if (isVerified == false)
+                    {
+                        proccessButton = InlineKeyboardButton.WithCallbackData("Приять в работу", $"/order_manage:verify:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}");
+                    }
+                    else
+                    {
+                        proccessButton = InlineKeyboardButton.WithCallbackData("Завершить заказ", $"/order_manage:complete:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}");
+                    }
+                }
+                else
+                {
+                    if (isVerified == false)
+                    {
+                        proccessButton = InlineKeyboardButton.WithCallbackData("Приять в работу", $"/order_manage:verify:{orders[0].Id}");
+                    }
+                    else
+                    {
+                        proccessButton = InlineKeyboardButton.WithCallbackData("Завершить заказ", $"/order_manage:complete:{orders[0].Id}");
+                    }
+                }
+
+                // отображение целого списк заказов без навигации, без признака Verified || Verified = false
+                if (orders != null && orderId == null && (verified == null || verified == false))
+                {
+                    var volumeTotal = await new CommonChecks(_workerCreds).GetVolume(orders.Where(x => x.Id == orders[0].Id).Select(x => x.CustomerId).First(), orders[0].Id);
+                    if (orders.Count == 1)
+                    {
+                        await Client.EditMessageTextAsync(
+                            chatId: chatId,
+                            messageId: messageId,
+                            text: $"Заказ № {orders[0].Id}\n" +
+                            $"Создан {orders[0].CreatedAt}\n" +
+                            $"Объёмом: {volumeTotal} m3\n" +
+                            $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
+                            $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
+                            $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
+                            replyMarkup: new InlineKeyboardMarkup(
+                                new[]
+                                {
                                 new[]
                                 {
                                    proccessButton,
@@ -405,24 +418,24 @@ public class OrderManageCommand : ICommand
                                     InlineKeyboardButton.WithCallbackData("Назад", "/order_manage"),
                                     InlineKeyboardButton.WithCallbackData("Главное меню", "/main"),
                                 }
-                            }),
-                        cancellationToken: cancellationToken
-                        );
-                }
-                else
-                {
-                    await Client.EditMessageTextAsync(
-                        chatId: chatId,
-                        messageId: messageId,
-                        text: $"Заказ № {orders[0].Id}\n" +
-                        $"Создан {orders[0].CreatedAt}\n" +
-                        $"Объёмом: {volumeTotal.Message} m3\n" +
-                        $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
-                        $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
-                        $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
-                        replyMarkup: new InlineKeyboardMarkup(
-                           new[]
-                           {
+                                }),
+                            cancellationToken: cancellationToken
+                            );
+                    }
+                    else
+                    {
+                        await Client.EditMessageTextAsync(
+                            chatId: chatId,
+                            messageId: messageId,
+                            text: $"Заказ № {orders[0].Id}\n" +
+                            $"Создан {orders[0].CreatedAt}\n" +
+                            $"Объёмом: {volumeTotal} m3\n" +
+                            $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
+                            $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
+                            $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
+                            replyMarkup: new InlineKeyboardMarkup(
+                               new[]
+                               {
                                new[]
                                {
                                    InlineKeyboardButton.WithCallbackData(">", $"/order_manage:all:{orders[1].Id}"),
@@ -436,24 +449,24 @@ public class OrderManageCommand : ICommand
                                    InlineKeyboardButton.WithCallbackData("Назад", "/order_manage"),
                                    InlineKeyboardButton.WithCallbackData("Главное меню", "/main"),
                                }
-                           }),
-                        cancellationToken: cancellationToken
-                    );
+                               }),
+                            cancellationToken: cancellationToken
+                        );
+                    }
+
                 }
 
-            }
-
-            // отображение целого списк заказов с навигацией, без признака Verified || Verified = false
-            else if (orders != null && orderId != null && (verified == null || verified == false))
-            {
-                var volumeTotal = await new CommonChecks().GetVolume(chatId, (int)orderId);
-                InlineKeyboardMarkup replyMarkup = null;
-
-                if (orders[0].Id == orderId)
+                // отображение целого списк заказов с навигацией, без признака Verified || Verified = false
+                else if (orders != null && orderId != null && (verified == null || verified == false))
                 {
-                    replyMarkup = new InlineKeyboardMarkup(
-                           new[]
-                           {
+                    var volumeTotal = await new CommonChecks(_workerCreds).GetVolume(orders.Where(x => x.Id == orderId).Select(x => x.CustomerId).First(), (int)orderId);
+                    InlineKeyboardMarkup replyMarkup = null;
+
+                    if (orders[0].Id == orderId)
+                    {
+                        replyMarkup = new InlineKeyboardMarkup(
+                               new[]
+                               {
                                new[]
                                {
                                     InlineKeyboardButton.WithCallbackData(">", $"/order_manage:all:{orders[1].Id}"),
@@ -467,13 +480,13 @@ public class OrderManageCommand : ICommand
                                    InlineKeyboardButton.WithCallbackData("Назад", "/order_manage"),
                                    InlineKeyboardButton.WithCallbackData("Главное меню", "/main"),
                                }
-                           });
-                }
-                else if (orders.Count > 2 && orders[^1].Id == orderId)
-                {
-                    replyMarkup = new InlineKeyboardMarkup(
-                           new[]
-                           {
+                               });
+                    }
+                    else if (orders.Count >= 2 && orders[^1].Id == orderId)
+                    {
+                        replyMarkup = new InlineKeyboardMarkup(
+                               new[]
+                               {
                                new[]
                                {
                                     InlineKeyboardButton.WithCallbackData("<", $"/order_manage:all:{orders[^2].Id}"),
@@ -487,13 +500,13 @@ public class OrderManageCommand : ICommand
                                    InlineKeyboardButton.WithCallbackData("Назад", "/order_manage"),
                                    InlineKeyboardButton.WithCallbackData("Главное меню", "/main"),
                                }
-                           });
-                }
-                else
-                {
-                    replyMarkup = new InlineKeyboardMarkup(
-                           new[]
-                           {
+                               });
+                    }
+                    else
+                    {
+                        replyMarkup = new InlineKeyboardMarkup(
+                               new[]
+                               {
                                new[]
                                {
                                    InlineKeyboardButton.WithCallbackData("<", $"/order_manage:all:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First()) - 1].Id}"),
@@ -508,42 +521,42 @@ public class OrderManageCommand : ICommand
                                    InlineKeyboardButton.WithCallbackData("Назад", "/order_manage"),
                                    InlineKeyboardButton.WithCallbackData("Главное меню", "/main"),
                                }
-                           });
+                               });
+                    }
+
+                    await Client.EditMessageTextAsync(
+                            chatId: chatId,
+                            messageId: messageId,
+                            text: $"Заказ № {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}\n" +
+                                  $"Создан {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].CreatedAt}\n" +
+                                  $"Объёмом: {volumeTotal} m3\n" +
+                                  $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
+                                  $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
+                                   $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
+                            replyMarkup: replyMarkup,
+                            cancellationToken: cancellationToken
+                            );
                 }
 
-                await Client.EditMessageTextAsync(
-                        chatId: chatId,
-                        messageId: messageId,
-                        text: $"Заказ № {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}\n" +
-                              $"Создан {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].CreatedAt}\n" +
-                              $"Объёмом: {volumeTotal.Message} m3\n" +
-                              $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
-                              $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
-                               $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
-                        replyMarkup: replyMarkup,
-                        cancellationToken: cancellationToken
-                        );
-            }
-
-            //отображение списка заказов без навигации, признак Verified = true
-            else if (orders != null && orderId == null && verified == true)
-            {
-                var volumeTotal = await new CommonChecks().GetVolume(chatId, orders[0].Id);
-
-                if (orders.Count == 1)
+                //отображение списка заказов без навигации, признак Verified = true
+                else if (orders != null && orderId == null && verified == true)
                 {
-                    await Client.EditMessageTextAsync(
-                        chatId: chatId,
-                        messageId: messageId,
-                        text: $"Заказ № {orders[0].Id}\n" +
-                        $"Создан {orders[0].CreatedAt}\n" +
-                        $"Объёмом: {volumeTotal.Message} m3\n" +
-                        $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
-                        $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
-                        $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
-                        replyMarkup: new InlineKeyboardMarkup(
-                            new[]
-                            {
+                    var volumeTotal = await new CommonChecks(_workerCreds).GetVolume(orders[0].CustomerId, orders[0].Id);
+
+                    if (orders.Count == 1)
+                    {
+                        await Client.EditMessageTextAsync(
+                            chatId: chatId,
+                            messageId: messageId,
+                            text: $"Заказ № {orders[0].Id}\n" +
+                            $"Создан {orders[0].CreatedAt}\n" +
+                            $"Объёмом: {volumeTotal} m3\n" +
+                            $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
+                            $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
+                            $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
+                            replyMarkup: new InlineKeyboardMarkup(
+                                new[]
+                                {
                                 new[]
                                 {
                                     InlineKeyboardButton.WithCallbackData("Завершить заказ", $"/order_manage:complete:{orders[0].Id}"),
@@ -553,34 +566,34 @@ public class OrderManageCommand : ICommand
                                     InlineKeyboardButton.WithCallbackData("Назад", "/order_manage"),
                                     InlineKeyboardButton.WithCallbackData("Главное меню", "/main"),
                                 }
-                            }),
-                        cancellationToken: cancellationToken
-                        );
-                }
-                else
-                {
-                    InlineKeyboardButton rightButton = new("");
-                    if (verified == true)
-                    {
-                        rightButton = InlineKeyboardButton.WithCallbackData(">", $"/order_manage:true:{orders[1].Id}");
+                                }),
+                            cancellationToken: cancellationToken
+                            );
                     }
                     else
                     {
-                        rightButton = InlineKeyboardButton.WithCallbackData(">", $"/order_manage:all:{orders[1].Id}");
-                    }
+                        InlineKeyboardButton rightButton = new("");
+                        if (verified == true)
+                        {
+                            rightButton = InlineKeyboardButton.WithCallbackData(">", $"/order_manage:true:{orders[1].Id}");
+                        }
+                        else
+                        {
+                            rightButton = InlineKeyboardButton.WithCallbackData(">", $"/order_manage:all:{orders[1].Id}");
+                        }
 
-                    await Client.EditMessageTextAsync(
-                        chatId: chatId,
-                        messageId: messageId,
-                        text: $"Заказ № {orders[0].Id}\n" +
-                        $"Создан {orders[0].CreatedAt}\n" +
-                        $"Объёмом: {volumeTotal.Message} m3\n" +
-                        $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
-                        $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
-                        $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
-                        replyMarkup: new InlineKeyboardMarkup(
-                           new[]
-                           {
+                        await Client.EditMessageTextAsync(
+                            chatId: chatId,
+                            messageId: messageId,
+                            text: $"Заказ № {orders[0].Id}\n" +
+                            $"Создан {orders[0].CreatedAt}\n" +
+                            $"Объёмом: {volumeTotal} m3\n" +
+                            $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
+                            $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
+                            $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
+                            replyMarkup: new InlineKeyboardMarkup(
+                               new[]
+                               {
                                new[]
                                {
                                    rightButton,
@@ -594,24 +607,24 @@ public class OrderManageCommand : ICommand
                                    InlineKeyboardButton.WithCallbackData("Назад", "/order_manage"),
                                    InlineKeyboardButton.WithCallbackData("Главное меню", "/main"),
                                }
-                           }),
-                        cancellationToken: cancellationToken
-                    );
+                               }),
+                            cancellationToken: cancellationToken
+                        );
+                    }
                 }
-            }
 
-            // отображение списка заказов с навигацией, признак Verified = true
-            else if (orders != null && orderId != null && verified == true)
-            {
-                var volumeTotal = await new CommonChecks().GetVolume(chatId, (int)orderId);
-
-                InlineKeyboardMarkup replyMarkup = null;
-
-                if (orders[0].Id == orderId)
+                // отображение списка заказов с навигацией, признак Verified = true
+                else if (orders != null && orderId != null && verified == true)
                 {
-                    replyMarkup = new InlineKeyboardMarkup(
-                           new[]
-                           {
+                    var volumeTotal = await new CommonChecks(_workerCreds).GetVolume(orders.Where(x => x.Id == orderId).Select(x => x.CustomerId).First(), (int)orderId);
+
+                    InlineKeyboardMarkup replyMarkup = null;
+
+                    if (orders[0].Id == orderId)
+                    {
+                        replyMarkup = new InlineKeyboardMarkup(
+                               new[]
+                               {
                                new[]
                                {
                                     InlineKeyboardButton.WithCallbackData(">", $"/order_manage:true:{orders[1].Id}"),
@@ -625,13 +638,13 @@ public class OrderManageCommand : ICommand
                                    InlineKeyboardButton.WithCallbackData("Назад", "/order_manage"),
                                    InlineKeyboardButton.WithCallbackData("Главное меню", "/main"),
                                }
-                           });
-                }
-                else if (orders.Count >= 2 && orders[^1].Id == orderId)
-                {
-                    replyMarkup = new InlineKeyboardMarkup(
-                           new[]
-                           {
+                               });
+                    }
+                    else if (orders.Count >= 2 && orders[^1].Id == orderId)
+                    {
+                        replyMarkup = new InlineKeyboardMarkup(
+                               new[]
+                               {
                                new[]
                                {
                                     InlineKeyboardButton.WithCallbackData("<", $"/order_manage:true:{orders[^2].Id}"),
@@ -645,13 +658,13 @@ public class OrderManageCommand : ICommand
                                    InlineKeyboardButton.WithCallbackData("Назад", "/order_manage"),
                                    InlineKeyboardButton.WithCallbackData("Главное меню", "/main"),
                                }
-                           });
-                }
-                else
-                {
-                    replyMarkup = new InlineKeyboardMarkup(
-                           new[]
-                           {
+                               });
+                    }
+                    else
+                    {
+                        replyMarkup = new InlineKeyboardMarkup(
+                               new[]
+                               {
                                new[]
                                {
                                    InlineKeyboardButton.WithCallbackData("<", $"/order_manage:true:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First()) - 1].Id}"),
@@ -666,22 +679,29 @@ public class OrderManageCommand : ICommand
                                    InlineKeyboardButton.WithCallbackData("Назад", "/order_manage"),
                                    InlineKeyboardButton.WithCallbackData("Главное меню", "/main"),
                                }
-                           });
-                };
-                
-                await Client.EditMessageTextAsync(
-                        chatId: chatId,
-                        messageId: messageId,
-                        text: $"Заказ № {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}\n" +
-                              $"Создан {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].CreatedAt}\n" +
-                              $"Объёмом: {volumeTotal.Message} m3\n" +
-                              $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
-                              $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
-                              $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
-                        replyMarkup: replyMarkup,
-                        cancellationToken: cancellationToken
-                        );
+                               });
+                    };
+
+                    await Client.EditMessageTextAsync(
+                            chatId: chatId,
+                            messageId: messageId,
+                            text: $"Заказ № {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}\n" +
+                                  $"Создан {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].CreatedAt}\n" +
+                                  $"Объёмом: {volumeTotal} m3\n" +
+                                  $"Подтверждён: {(isVerified == false ? "Нет" : "Да")}\n" +
+                                  $"Завершён: {(isCompleted == false ? "Нет" : "Да")}\n" +
+                                  $"Оплачен: {(isPaid == false ? "Нет" : "Да")}",
+                            replyMarkup: replyMarkup,
+                            cancellationToken: cancellationToken
+                            );
+                }
             }
         }
+        catch (ApiRequestException ex)
+        {
+            TelegramWorker.Logger.LogWarning($"{ex.Message}");
+        }
+
+        
     }
 }

@@ -86,8 +86,7 @@ namespace WoodWebAPI.Services
                     TelegramId = x.TelegramID,
                     CustomerId = x.Id,
                     CustomerName = x.Name,
-                })
-                .DefaultIfEmpty(new()));
+                }));
 
                 return Task.FromResult<GetCustomerAdmin[]?>([.. customersArray]);
             }

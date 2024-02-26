@@ -8,9 +8,9 @@ using WoodWebAPI.Data.Models.Order;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
-public class AddOrderCommand(TelegramWorkerCreds workerCreds) : ICommand
+public class AddOrderCommand(IWorkerCreds workerCreds) : ICommand
 {
-    private readonly TelegramWorkerCreds _workerCreds = workerCreds;
+    private readonly IWorkerCreds _workerCreds = workerCreds;
     public TelegramBotClient Client => TelegramWorker.API;
 
     public string Name => "/new_order";

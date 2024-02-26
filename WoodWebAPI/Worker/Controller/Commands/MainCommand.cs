@@ -7,8 +7,9 @@ using WoodWebAPI.Data.Entities;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
-public class MainCommand : ICommand
+public class MainCommand(IWorkerCreds workerCreds) : ICommand
 {
+    private readonly IWorkerCreds _workerCreds = workerCreds;
     public TelegramBotClient Client => TelegramWorker.API;
 
     public string Name => "/main";
@@ -37,7 +38,7 @@ public class MainCommand : ICommand
 
                     if (TelegramWorker.AdminList.Find(x => x.TelegramId == chatid.ToString() && x.AdminRole == 1) != null) { isAdmin = true; }
 
-                    userExist = await new CommonChecks().CheckCustomer(chatid, cancellationToken);
+                    userExist = await new CommonChecks(_workerCreds).CheckCustomer(chatid, cancellationToken);
                 }
                 else if (update.Type == UpdateType.CallbackQuery)
                 {
@@ -47,7 +48,7 @@ public class MainCommand : ICommand
 
                     if (TelegramWorker.AdminList.Find(x => x.TelegramId == chatid.ToString() && x.AdminRole == 1) != null) { isAdmin = true; }
 
-                    userExist = await new CommonChecks().CheckCustomer(chatid, cancellationToken);
+                    userExist = await new CommonChecks(_workerCreds).CheckCustomer(chatid, cancellationToken);
 
                     commandParts = update.CallbackQuery.Data.Split(":");
 
@@ -59,7 +60,7 @@ public class MainCommand : ICommand
 
                 if ((userExist && chatid != -1 && !isAdmin) || continueAsUser)
                 {
-                    var orders = await new CommonChecks().CheckOrdersOfCustomer(chatid, cancellationToken);
+                    var orders = await new CommonChecks(_workerCreds).CheckOrdersOfCustomer(chatid, cancellationToken);
 
                     if (orders != null)
                     {

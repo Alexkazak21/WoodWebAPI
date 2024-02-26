@@ -8,8 +8,9 @@ using WoodWebAPI.Data.Models.OrderPosition;
 
 namespace WoodWebAPI.Worker.Controller.Commands
 {
-    public class AlterOrderPositionCommand : ICommand
+    public class AlterOrderPositionCommand(IWorkerCreds workerCreds) : ICommand
     {
+        private readonly IWorkerCreds _workerCreds = workerCreds;
         public TelegramBotClient Client => TelegramWorker.API;
 
         public string Name => "/alter_timber";
@@ -243,7 +244,7 @@ namespace WoodWebAPI.Worker.Controller.Commands
                 }
              );
 
-            var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/OrderPosition/GetOrderPositionsOfOrder", content);
+            var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/OrderPosition/GetOrderPositionsOfOrder", content);
             var responce = await request.Content.ReadAsStringAsync();
 
             var result = JsonConvert.DeserializeObject<OrderPositionsModel>(responce);

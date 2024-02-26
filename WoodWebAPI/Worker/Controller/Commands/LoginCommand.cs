@@ -6,8 +6,9 @@ using WoodWebAPI.Data.Entities;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
-public class LoginCommand : ICommand
+public class LoginCommand(IWorkerCreds workerCreds) : ICommand
 {
+    private readonly IWorkerCreds _workerCreds = workerCreds;
     public TelegramBotClient Client => TelegramWorker.API;
 
     public string Name => "/login";
@@ -30,7 +31,7 @@ public class LoginCommand : ICommand
            });
 
 
-        var adminsList = await new CommonChecks().GetAdmin();
+        var adminsList = await new CommonChecks(_workerCreds).GetAdmin();
 
         if (adminsList != null)
         {
