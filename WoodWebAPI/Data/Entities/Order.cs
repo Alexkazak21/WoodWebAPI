@@ -1,17 +1,28 @@
-﻿namespace WoodWebAPI.Data.Entities;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace WoodWebAPI.Data.Entities;
 
 public partial class Order
 { 
     public int Id { get; set; }
 
-    public int OrderId { get; set; }
-
-    public int CustomerId { get; set; }  
-
+    [ForeignKey("CustomerTelegramId")]
+    public long CustomerTelegramId { get; set; }
+    public Customer? Customer { get; set; }
     public DateTime CreatedAt { get; set; }
-    public bool IsVerified { get; set; }
-    public bool IsCompleted { get; set; }
-    public bool IsPaid { get; set; }
+    public OrderStatus Status { get;set; }
     public DateTime CompletedAt { get; set; }
-    public virtual ICollection<Timber> Timbers { get; set;} = new List<Timber>();
+    public virtual ICollection<OrderPosition> OrderPositions { get; set;} = [];
+}
+
+public enum OrderStatus
+{
+    NewOrder,
+    Approved,
+    Verivied,
+    CanceledByAdmin,
+    Completed,
+    Paid,
+    Archived
 }

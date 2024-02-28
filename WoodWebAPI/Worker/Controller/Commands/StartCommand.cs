@@ -7,14 +7,17 @@ using WoodWebAPI.Data.Models.Customer;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
-public class StartCommand : ICommand
+public class StartCommand(IWorkerCreds workerCreds) : ICommand
 {
+    private readonly IWorkerCreds _workerCreds = workerCreds;
+    private readonly ILogger<StartCommand> _logger;
     public TelegramBotClient Client => TelegramWorker.API;
 
     public string Name => "/start";
 
     public async Task Execute(Update update, CancellationToken cancellationToken)
     {
+        //_logger.LogInformation("Start command");
         if (!cancellationToken.IsCancellationRequested)
         {
             long chatId = -1;
@@ -40,12 +43,12 @@ public class StartCommand : ICommand
         }
     }
 
-    private async Task SendButtonsAsync(long chatId, int messageId = -1, string userFirstName = null, CancellationToken cancellationToken = default)
+    private async Task SendButtonsAsync(long chatId, int messageId = -1, string? userFirstName = null, CancellationToken cancellationToken = default)
     {
         var userExist = false;
         using (HttpClient client = new HttpClient())
         {
-            HttpResponseMessage response = await client.PostAsync($"{TelegramWorker.BaseUrl}/api/Customer/GetCustomers", new StringContent(""));
+            HttpResponseMessage response = await client.PostAsync($"{_workerCreds.BaseURL}/api/Customer/GetCustomers", new StringContent(""));
 
             if (response.IsSuccessStatusCode)
             {
@@ -56,15 +59,14 @@ public class StartCommand : ICommand
                 {
                     try
                     {
-                        if (long.Parse(customer.TelegramId) == chatId)
+                        if (customer.TelegramId == chatId)
                         {
                             userExist = true;
                         }
                     }
-                    catch (FormatException ex)
+                    catch (FormatException)
                     {
-                        TelegramWorker.Logger
-                             .LogWarning("Startup command\n" +
+                        _logger.LogWarning("Startup command\n" +
                             "\tНевозможно распарсить идентификатор, скорее всего он не равен типу long");
                     }
 

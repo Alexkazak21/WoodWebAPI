@@ -1,10 +1,13 @@
-﻿namespace WoodWebAPI.Data.Entities;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Runtime.InteropServices;
+
+namespace WoodWebAPI.Data.Entities;
 
 public partial class Customer
 {
-    public int CustomerId { get; set; }
+    public int Id { get; set; }
     public string Name { get; set; } = null!;
-    public string TelegramID { get; set; } = null!;
+    public long TelegramID { get; set; }
     public string Username { get; set; } = null!;
-    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+    public virtual ICollection<Order> Orders { get; set; } = [];
 }

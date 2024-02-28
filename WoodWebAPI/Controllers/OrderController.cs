@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Order;
 using WoodWebAPI.Services;
 
@@ -28,7 +29,7 @@ namespace WoodWebAPI.Controllers
                 return data;
             }
 
-            return null;
+            return data;
         }
 
         [HttpPost]
@@ -42,11 +43,11 @@ namespace WoodWebAPI.Controllers
                 return data;
             }
 
-            return null;
+            return data;
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateOrder(CreateOrderDTO model)
+        public async Task<IActionResult> CreateOrder(GetOrdersDTO model)
         {
             var data = await _entityService.CreateAsync(model);
 
@@ -59,9 +60,9 @@ namespace WoodWebAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> DeleteOrder(DeleteOrderDTO model)
+        public async Task<IActionResult> DeleteOrder(ArchiveOrderDTO model)
         {
-            var data = await _entityService.DeleteAsync(model);
+            var data = await _entityService.ArchiveAsync(model);
 
             if (data.Success)
             {
@@ -73,9 +74,9 @@ namespace WoodWebAPI.Controllers
 
         [Authorize]
         [HttpPost]
-        public async Task<IActionResult> DeleteOrderByAdmin(DeleteOrderDTO model)
+        public async Task<IActionResult> DeleteOrderByAdmin(ArchiveOrderDTO model)
         {
-            var data = await _entityService.DeleteByAdminAsync(model);
+            var data = await _entityService.ArchiveByAdminAsync(model);
 
             if (data.Success)
             {
@@ -87,42 +88,16 @@ namespace WoodWebAPI.Controllers
 
         //[Authorize]
         [HttpPost]
-        public async Task<IActionResult> VerifyOrderByAdmin(VerifyOrderDTO model)
+        public async Task<ExecResultModel> ChangeStatusOfOrder(ChangeStatusDTO model)
         {
-            var data = await _entityService.VerifyOrderByAdminAsync(model);
+            var data = await _entityService.ChangeStatusOfOrderAsync(model);
 
             if (data.Success)
             {
-                return Ok(data);
+                return data;
             }
 
-            return BadRequest(data);
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> CompleteOrderByAdmin(VerifyOrderDTO model)
-        {
-            var data = await _entityService.CompleteOrderByAdminAsync(model);
-
-            if (data.Success)
-            {
-                return Ok(data);
-            }
-
-            return BadRequest(data);
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> PaidSuccessfull(VerifyOrderDTO model)
-        {
-            var data = await _entityService.PaidSuccessfullyAsync(model);
-
-            if (data.Success)
-            {
-                return Ok(data);
-            }
-
-            return BadRequest(data);
+            return data;
         }
     }
 }

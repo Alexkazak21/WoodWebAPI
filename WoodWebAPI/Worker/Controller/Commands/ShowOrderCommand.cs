@@ -3,95 +3,98 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using WoodWebAPI.Data.Entities;
 using WoodWebAPI.Data.Models;
-using WoodWebAPI.Data.Models.Timber;
+using WoodWebAPI.Data.Models.OrderPosition;
+using WoodWebAPI.Services.Extensions;
 
 namespace WoodWebAPI.Worker.Controller.Commands
 {
-    public class ShowOrderCommand : ICommand
+    public class ShowOrderCommand(IWorkerCreds workerCreds) : ICommand
     {
+        private readonly IWorkerCreds _workerCreds = workerCreds;
         public TelegramBotClient Client => TelegramWorker.API;
 
         public string Name => "/show_order";
 
         public async Task Execute(Update update, CancellationToken cancellationToken)
         {
-            if (!cancellationToken.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested || update == null)
             {
-                if (update != null)
+                return;
+            }
+
+            var userExist = false;
+
+            long chatid = -1;
+
+            int orderId = -1;
+            try
+            {
+                int.TryParse(update?.CallbackQuery?.Data?.Substring(update.CallbackQuery.Data.IndexOf(':') + 1, update.CallbackQuery.Data.Length - 1 - update.CallbackQuery.Data.IndexOf(':')), out orderId);
+            }
+            catch (Exception)
+            {
+                TelegramWorker.Logger.LogError("Can`t get order id while executing show command");
+            }
+
+            if (update.Type == UpdateType.Message)
+            {
+                chatid = update.Message.Chat.Id;
+
+                userExist = await new CommonChecks(_workerCreds).CheckCustomer(chatid, cancellationToken);
+            }
+            else if (update.Type == UpdateType.CallbackQuery)
+            {
+                chatid = update.CallbackQuery.From.Id;
+
+                userExist = await new CommonChecks(_workerCreds).CheckCustomer(chatid, cancellationToken);
+            }
+
+            if (userExist && chatid != -1 && orderId != -1)
+            {
+                var orders = await new CommonChecks(_workerCreds).CheckOrdersOfCustomer(chatid, cancellationToken);
+
+                if (orders != null)
                 {
-                    var userExist = false;
-
-                    long chatid = -1;
-
-                    int orderId = -1;
-                    try
+                    foreach (var order in orders)
                     {
-                        int.TryParse(update?.CallbackQuery?.Data?.Substring(update.CallbackQuery.Data.IndexOf(':') + 1, update.CallbackQuery.Data.Length - 1 - update.CallbackQuery.Data.IndexOf(':')), out orderId);
-                    }
-                    catch (Exception ex)
-                    {
-                        TelegramWorker.Logger.LogError("Can`t get order id while executing show command");
-                    }
-
-                    if (update.Type == UpdateType.Message)
-                    {
-                        chatid = update.Message.Chat.Id;
-
-                        userExist = await new CommonChecks().CheckCustomer(chatid, cancellationToken);
-                    }
-                    else if (update.Type == UpdateType.CallbackQuery)
-                    {
-                        chatid = update.CallbackQuery.From.Id;
-
-                        userExist = await new CommonChecks().CheckCustomer(chatid, cancellationToken);
-                    }
-
-                    if (userExist && chatid != -1 && orderId != -1)
-                    {
-                        var orders = await new CommonChecks().CheckOrdersOfCustomer(chatid, cancellationToken);
-
-                        if (orders != null)
+                        if (order.Id == orderId)
                         {
-                            foreach (var order in orders)
+                            var volume = 0.0;
+                            using (HttpClient httpClient = new())
                             {
-                                if (order.Id == orderId)
+                                GetOrderPositionsByOrderIdDTO getTimbers = new()
                                 {
-                                    var volume = 0.0;
-                                    using (HttpClient httpClient = new HttpClient())
-                                    {
-                                        GetTimberDTO getTimbers = new GetTimberDTO()
-                                        {
-                                            customerTelegramId = chatid.ToString(),
-                                            OrderId = orderId,
-                                        };
+                                    TelegramId = chatid,
+                                    OrderId = orderId,
+                                };
 
-                                        var content = JsonContent.Create(getTimbers);
+                                var content = JsonContent.Create(getTimbers);
 
-                                        var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Timber/GetTotalVolumeOfOrder", content);
+                                var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/OrderPosition/GetTotalVolumeOfOrder", content);
 
-                                        var responce = await request.Content.ReadAsStringAsync();
-                                        var result = JsonConvert.DeserializeObject<ExecResultModel>(responce);
-                                        if (result != null && result.Success)
-                                        {
-                                            volume = double.Parse(result.Message);
-                                        }
-                                    }
+                                var responce = await request.Content.ReadAsStringAsync();
+                                var result = JsonConvert.DeserializeObject<double>(responce);
 
-                                    var orderIsVerified = order.IsVerified ? "ДА" : "НЕТ";
+                                volume = result;
+                            }
 
-                                    if (order.IsCompleted && !order.IsPaid)
-                                    {
-                                        InlineKeyboardMarkup replyMarkup = null;
+                            var orderStatusMessage = order.OrderStatusMessage();
 
-                                        var ammountToPay = decimal.Round(TelegramWorker.PriceForM3 * Convert.ToDecimal(volume), 2, MidpointRounding.AwayFromZero) > TelegramWorker.MinPrice ?
-                                                           decimal.Round(TelegramWorker.PriceForM3 * Convert.ToDecimal(volume), 2, MidpointRounding.AwayFromZero) : TelegramWorker.MinPrice;
 
-                                        if (volume >= 0)
-                                        {
-                                            replyMarkup = new InlineKeyboardMarkup(
-                                                            new[]
-                                                            {
+                            if (order.Status == OrderStatus.Completed)
+                            {
+                                InlineKeyboardMarkup? replyMarkup = null;
+
+                                var ammountToPay = decimal.Round(_workerCreds.PriceForM3 * Convert.ToDecimal(volume), 2, MidpointRounding.AwayFromZero) > _workerCreds.MinPrice ?
+                                                   decimal.Round(_workerCreds.PriceForM3 * Convert.ToDecimal(volume), 2, MidpointRounding.AwayFromZero) : _workerCreds.MinPrice;
+
+                                if (volume >= 0)
+                                {
+                                    replyMarkup = new InlineKeyboardMarkup(
+                                                    new[]
+                                                    {
                                                                 new[]
                                                                 {
                                                                     InlineKeyboardButton.WithCallbackData("Перейти к оплате", $"/payment:{chatid}:{ammountToPay}:{orderId}"),
@@ -100,28 +103,28 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                                                 {
                                                                     InlineKeyboardButton.WithCallbackData("К заказам","/main")
                                                                 }
-                                                            });
-                                        }
+                                                    });
+                                }
 
-                                        await Client.EditMessageTextAsync(
-                                                        chatId: chatid,
-                                                        text: $"Ваш заказ номер {order.Id}" +
-                                                              $"\nДата создания: {order.CreatedAt}" +
-                                                              $"\nОбъёмом: {volume} m3" +
-                                                              $"\nЗаказ завершён" +
-                                                              $"\nСумма к оплате: {ammountToPay} BYN",
-                                                        messageId: update.CallbackQuery.Message.MessageId,
-                                                        replyMarkup: replyMarkup,
-                                                        cancellationToken: cancellationToken);
-                                    }
-                                    else if (!order.IsVerified)
-                                    {
-                                        InlineKeyboardMarkup replyMarkup;
-                                        if (volume == 0.0)
-                                        {
-                                            replyMarkup = new InlineKeyboardMarkup(
-                                                            new[]
-                                                            {
+                                await Client.EditMessageTextAsync(
+                                                chatId: chatid,
+                                                text: $"Ваш заказ номер {order.Id}" +
+                                                      $"\nДата создания: {order.CreatedAt}" +
+                                                      $"\nОбъёмом: {volume} m3" +
+                                                      $"\n{orderStatusMessage}" +
+                                                      $"\nСумма к оплате: {ammountToPay} BYN",
+                                                messageId: update.CallbackQuery.Message.MessageId,
+                                                replyMarkup: replyMarkup,
+                                                cancellationToken: cancellationToken);
+                            }
+                            else if (order.Status < OrderStatus.Verivied)
+                            {
+                                InlineKeyboardMarkup replyMarkup;
+                                if (volume == 0.0)
+                                {
+                                    replyMarkup = new InlineKeyboardMarkup(
+                                                    new[]
+                                                    {
                                                                 new[]
                                                                 {
                                                                     InlineKeyboardButton.WithCallbackData("Добавить бревно",$"/add_timber:{order.Id}")
@@ -130,13 +133,13 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                                                 {
                                                                     InlineKeyboardButton.WithCallbackData("К заказам","/main")
                                                                 }
-                                                            });
-                                        }
-                                        else
-                                        {
-                                            replyMarkup = new InlineKeyboardMarkup(
-                                                            new[]
-                                                            {
+                                                    });
+                                }
+                                else
+                                {
+                                    replyMarkup = new InlineKeyboardMarkup(
+                                                    new[]
+                                                    {
                                                             new[]
                                                             {
                                                                 InlineKeyboardButton.WithCallbackData("Добавить бревно",$"/add_timber:{order.Id}")
@@ -149,44 +152,41 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                                             {
                                                                 InlineKeyboardButton.WithCallbackData("К заказам","/main")
                                                             }
-                                                            });
-                                        }
+                                                    });
+                                }
 
-                                        await Client.EditMessageTextAsync(
-                                                        chatId: chatid,
-                                                        text: $"Ваш заказ номер {order.Id}" +
-                                                              $"\nДата создания: {order.CreatedAt}" +
-                                                              $"\nПодтверждён: {orderIsVerified}" +
-                                                              $"\nОбъёмом: {volume} m3",
-                                                        messageId: update.CallbackQuery.Message.MessageId,
-                                                        replyMarkup: replyMarkup,
-                                                        cancellationToken: cancellationToken);
-                                    }
-                                    else
-                                    {
-                                        InlineKeyboardMarkup replyMarkup;
+                                await Client.EditMessageTextAsync(
+                                                chatId: chatid,
+                                                text: $"Ваш заказ номер {order.Id}" +
+                                                      $"\nДата создания: {order.CreatedAt}" +
+                                                      $"\n{orderStatusMessage}" +
+                                                      $"\nОбъёмом: {volume} m3",
+                                                messageId: update.CallbackQuery.Message.MessageId,
+                                                replyMarkup: replyMarkup,
+                                                cancellationToken: cancellationToken);
+                            }
+                            else
+                            {
+                                InlineKeyboardMarkup replyMarkup;
 
-                                        replyMarkup = new InlineKeyboardMarkup(
-                                                        new[]
-                                                            {
+                                replyMarkup = new InlineKeyboardMarkup(
+                                                new[]
+                                                    {
                                                                 new[]
                                                                 {
                                                                     InlineKeyboardButton.WithCallbackData("К заказам","/main")
                                                                 }
-                                                        });
+                                                });
 
-                                        await Client.EditMessageTextAsync(
-                                                        chatId: chatid,
-                                                        text: $"Ваш заказ номер {order.Id}" +
-                                                              $"\nДата создания: {order.CreatedAt}" +
-                                                              $"\nПодтверждён: {orderIsVerified}" +
-                                                              $"\nОбъёмом: {volume} m3",
-                                                        messageId: update.CallbackQuery.Message.MessageId,
-                                                        replyMarkup: replyMarkup,
-                                                        cancellationToken: cancellationToken);
-                                    }
-
-                                }
+                                await Client.EditMessageTextAsync(
+                                                chatId: chatid,
+                                                text: $"Ваш заказ номер {order.Id}" +
+                                                      $"\nДата создания: {order.CreatedAt}" +
+                                                      $"\n{orderStatusMessage}" +
+                                                      $"\nОбъёмом: {volume} m3",
+                                                messageId: update.CallbackQuery.Message.MessageId,
+                                                replyMarkup: replyMarkup,
+                                                cancellationToken: cancellationToken);
                             }
                         }
                     }

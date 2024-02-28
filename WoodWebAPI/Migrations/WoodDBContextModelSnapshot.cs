@@ -24,27 +24,48 @@ namespace WoodWebAPI.Migrations
 
             modelBuilder.Entity("WoodWebAPI.Data.Entities.Customer", b =>
                 {
-                    b.Property<int>("CustomerId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CustomerId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("TelegramID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<long>("TelegramID")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("CustomerId");
+                    b.HasKey("Id");
 
                     b.ToTable("Customers");
+                });
+
+            modelBuilder.Entity("WoodWebAPI.Data.Entities.EtalonTimber", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<double>("DiameterInСantimeter")
+                        .HasColumnType("float");
+
+                    b.Property<double>("LengthInMeter")
+                        .HasColumnType("float");
+
+                    b.Property<double>("VolumeInMeter3")
+                        .HasColumnType("float");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EtalonTimberList");
                 });
 
             modelBuilder.Entity("WoodWebAPI.Data.Entities.IsAdmin", b =>
@@ -62,38 +83,14 @@ namespace WoodWebAPI.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("TelegramId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TelegramUsername")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
                     b.ToTable("IsAdmin");
-                });
-
-            modelBuilder.Entity("WoodWebAPI.Data.Entities.Kub", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("Diameter")
-                        .HasColumnType("int");
-
-                    b.Property<double>("Length")
-                        .HasColumnType("float");
-
-                    b.Property<double>("Value")
-                        .HasColumnType("float");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Kub");
                 });
 
             modelBuilder.Entity("WoodWebAPI.Data.Entities.Order", b =>
@@ -110,29 +107,20 @@ namespace WoodWebAPI.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
+                    b.Property<long>("CustomerTelegramId")
+                        .HasColumnType("bigint");
 
-                    b.Property<bool>("IsCompleted")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsPaid")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsVerified")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("OrderId")
+                    b.Property<int>("Status")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CustomerId");
+                    b.HasIndex("CustomerTelegramId");
 
                     b.ToTable("Orders");
                 });
 
-            modelBuilder.Entity("WoodWebAPI.Data.Entities.Timber", b =>
+            modelBuilder.Entity("WoodWebAPI.Data.Entities.OrderPosition", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -140,39 +128,46 @@ namespace WoodWebAPI.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("Diameter")
-                        .HasColumnType("int");
-
-                    b.Property<double>("Length")
+                    b.Property<double>("DiameterInCantimeter")
                         .HasColumnType("float");
 
-                    b.Property<int?>("OrderId")
+                    b.Property<double>("LengthInMeter")
+                        .HasColumnType("float");
+
+                    b.Property<int>("OrderId")
                         .HasColumnType("int");
 
-                    b.Property<double>("Volume")
+                    b.Property<double>("VolumeInMeter3")
                         .HasColumnType("float");
 
                     b.HasKey("Id");
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("Timbers");
+                    b.ToTable("OrderPositions");
                 });
 
             modelBuilder.Entity("WoodWebAPI.Data.Entities.Order", b =>
                 {
-                    b.HasOne("WoodWebAPI.Data.Entities.Customer", null)
+                    b.HasOne("WoodWebAPI.Data.Entities.Customer", "Customer")
                         .WithMany("Orders")
-                        .HasForeignKey("CustomerId")
+                        .HasForeignKey("CustomerTelegramId")
+                        .HasPrincipalKey("TelegramID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Customer");
                 });
 
-            modelBuilder.Entity("WoodWebAPI.Data.Entities.Timber", b =>
+            modelBuilder.Entity("WoodWebAPI.Data.Entities.OrderPosition", b =>
                 {
-                    b.HasOne("WoodWebAPI.Data.Entities.Order", null)
-                        .WithMany("Timbers")
-                        .HasForeignKey("OrderId");
+                    b.HasOne("WoodWebAPI.Data.Entities.Order", "Order")
+                        .WithMany("OrderPositions")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("WoodWebAPI.Data.Entities.Customer", b =>
@@ -182,7 +177,7 @@ namespace WoodWebAPI.Migrations
 
             modelBuilder.Entity("WoodWebAPI.Data.Entities.Order", b =>
                 {
-                    b.Navigation("Timbers");
+                    b.Navigation("OrderPositions");
                 });
 #pragma warning restore 612, 618
         }

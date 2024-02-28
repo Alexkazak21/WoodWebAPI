@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -8,7 +9,7 @@ using WoodWebAPI.Auth;
 
 namespace WoodWebAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/[controller]/[action]")]
     [ApiController]
     public class AuthenticateController : ControllerBase
     {
@@ -27,7 +28,6 @@ namespace WoodWebAPI.Controllers
         }
 
         [HttpPost]
-        [Route("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
             var user = await _userManager.FindByNameAsync(model.TelegramId);
@@ -58,7 +58,6 @@ namespace WoodWebAPI.Controllers
         }
 
         [HttpPost]
-        [Route("register")]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
             var userExists = await _userManager.FindByNameAsync(model.TelegramID);
@@ -78,7 +77,6 @@ namespace WoodWebAPI.Controllers
         }
 
         [HttpPost]
-        [Route("register-admin")]
         public async Task<IActionResult> RegisterAdmin([FromBody] RegisterModel model)
         {
             var userExists = await _userManager.FindByNameAsync(model.TelegramID);
@@ -110,6 +108,36 @@ namespace WoodWebAPI.Controllers
             return Ok(new Response { Status = "Success", Message = "Пользователь успешно создан!" });
         }
 
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> ChangeRole([FromBody] ChangeRoleDTO model)
+        {
+            var userExists = await _userManager.FindByNameAsync(model.TelegramId);
+            if (userExists == null)
+                return StatusCode(StatusCodes.Status500InternalServerError, new Response { Status = "Error", Message = "No such user!" });
+
+            if (!await _roleManager.RoleExistsAsync(UserRoles.Admin))
+                await _roleManager.CreateAsync(new IdentityRole(UserRoles.Admin));
+            if (!await _roleManager.RoleExistsAsync(UserRoles.User))
+                await _roleManager.CreateAsync(new IdentityRole(UserRoles.User));
+
+            var roles = await _userManager.GetRolesAsync(userExists);
+
+
+            if (!roles.Any(x => x == "Admin") && model.NewRole == "Admin" && await _roleManager.RoleExistsAsync(UserRoles.Admin))
+            {
+                await _userManager.AddToRoleAsync(userExists, UserRoles.Admin);
+                return Ok(new Response { Status = "Success", Message = "Роль Пользователя успешно обнавлена!" });
+            }
+
+            if (roles.Any(x => x == "Admin") && model.NewRole == "User" && await _roleManager.RoleExistsAsync(UserRoles.Admin))
+            {
+                await _userManager.RemoveFromRoleAsync(userExists, UserRoles.Admin);
+                return Ok(new Response { Status = "Success", Message = "Роль Пользователя успешно обнавлена!" });
+            }
+
+            return StatusCode(StatusCodes.Status500InternalServerError, new Response { Status = "Error", Message = "User role change failed!" });
+        }
         private JwtSecurityToken GetToken(List<Claim> authClaims)
         {
             var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]));
@@ -117,7 +145,7 @@ namespace WoodWebAPI.Controllers
             var token = new JwtSecurityToken(
                 issuer: _configuration["JWT:ValidIssuer"],
                 audience: _configuration["JWT:ValidAudience"],
-                expires: DateTime.Now.AddHours(3),
+                expires: DateTime.Now.AddHours(1),
                 claims: authClaims,
                 signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
                 );

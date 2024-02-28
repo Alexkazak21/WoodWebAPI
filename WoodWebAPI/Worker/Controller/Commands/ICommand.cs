@@ -4,7 +4,7 @@ using Telegram.Bot.Types;
 namespace WoodWebAPI.Worker.Controller.Commands;
 
 public interface ICommand
-{
+{ 
     public TelegramBotClient Client { get; }
 
     public string Name { get; }

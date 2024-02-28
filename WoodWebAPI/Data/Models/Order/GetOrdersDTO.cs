@@ -2,5 +2,5 @@
 
 public class GetOrdersDTO
 {
-    public string? Customer_TelegramID { get; set; }
+    public long CustomerTelegramId { get; set; }
 }

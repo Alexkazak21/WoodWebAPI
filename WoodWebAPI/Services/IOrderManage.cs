@@ -6,13 +6,11 @@ namespace WoodWebAPI.Services;
 
 public interface IOrderManage
 {
-    Task<ExecResultModel> CreateAsync(CreateOrderDTO model);
+    Task<ExecResultModel> CreateAsync(GetOrdersDTO model);
     Task<ExecResultModel> UpdateAsync();
-    Task<ExecResultModel> DeleteAsync(DeleteOrderDTO model);
-    Task<ExecResultModel> DeleteByAdminAsync(DeleteOrderDTO model);
+    Task<ExecResultModel> ArchiveAsync(ArchiveOrderDTO model);
+    Task<ExecResultModel> ArchiveByAdminAsync(ArchiveOrderDTO model);
     Task<OrderModel[]?> GetOrdersOfCustomerAsync(GetOrdersDTO model);
     Task<OrderModel[]?> GetFullOrdersArrayAsync();
-    Task<ExecResultModel> VerifyOrderByAdminAsync(VerifyOrderDTO model);
-    Task<ExecResultModel> CompleteOrderByAdminAsync(VerifyOrderDTO model);
-    Task<ExecResultModel> PaidSuccessfullyAsync(VerifyOrderDTO model);
+    Task<ExecResultModel> ChangeStatusOfOrderAsync(ChangeStatusDTO model);
 }

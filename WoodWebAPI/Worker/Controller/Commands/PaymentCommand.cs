@@ -6,18 +6,25 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.Payments;
 using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Order;
+using WoodWebAPI.Data.Entities;
 
 namespace WoodWebAPI.Worker.Controller.Commands;
 
-public class PaymentCommand : ICommand
+public class PaymentCommand(IWorkerCreds workerCreds) : ICommand
 {
+    private readonly IWorkerCreds _workerCreds = workerCreds;
     public TelegramBotClient Client => TelegramWorker.API;
 
     public string Name => "/payment";
 
     public async Task Execute(Update update, CancellationToken cancellationToken)
     {
-        if (update != null)
+        if (update == null)
+        {
+            return;
+        }
+
+        try
         {
             if (update.CallbackQuery != null)
             {
@@ -28,9 +35,9 @@ public class PaymentCommand : ICommand
                 {
                     var telegramId = long.Parse(commandParts[1]);
                     var orderId = int.Parse(update.PreCheckoutQuery.InvoicePayload);
-                    var orders = await new CommonChecks().CheckOrdersOfCustomer(telegramId, cancellationToken);
+                    var orders = await new CommonChecks(_workerCreds).CheckOrdersOfCustomer(telegramId, cancellationToken);
 
-                    if (orders.Where(x => x.OrderId == orderId && x.IsCompleted == true).First() != null)
+                    if (orders.Where(x => x.Id == orderId && x.Status == OrderStatus.Completed).First() != null)
                     {
                         var precheckId = update.PreCheckoutQuery.Id;
                         await Client.AnswerPreCheckoutQueryAsync(
@@ -40,7 +47,7 @@ public class PaymentCommand : ICommand
                     }
                 }
 
-                var totalSumToPay = decimal.Parse(commandParts[2]) > TelegramWorker.MinPrice ? decimal.Parse(commandParts[2]) : TelegramWorker.MinPrice;
+                var totalSumToPay = decimal.Parse(commandParts[2]) > _workerCreds.MinPrice ? decimal.Parse(commandParts[2]) : _workerCreds.MinPrice;
 
                 await Client.SendInvoiceAsync(
                     chatId: chatId,
@@ -48,7 +55,7 @@ public class PaymentCommand : ICommand
                     description: "Заказ на распил древисины завершён в полном объёме." +
                     "\nПродолжая ВЫ соглашаетесь с условиями оплаты",
                     payload: $"{commandParts[3]}",
-                    providerToken: TelegramWorker.PaymentToken,
+                    providerToken: _workerCreds.PaymentToken,
                     currency: "BYN",
                     prices: new[]
                     {
@@ -61,26 +68,46 @@ public class PaymentCommand : ICommand
             {
                 var telegramId = update.Message.From.Id;
                 var orderId = int.Parse(update.Message.SuccessfulPayment.InvoicePayload);
-                var orders = await new CommonChecks().CheckOrdersOfCustomer(telegramId, cancellationToken);
+                var orders = await new CommonChecks(_workerCreds).CheckOrdersOfCustomer(telegramId, cancellationToken);
 
-                if (orders.Where(x => x.OrderId == orderId && x.IsCompleted == true).First() != null)
+                if (orders.Where(x => x.Id == orderId && x.Status == OrderStatus.Completed).First() != null)
                 {
 
                     using (HttpClient httpClient = new HttpClient())
                     {
                         var content = JsonContent.Create(
-                            new VerifyOrderDTO()
+                            new ChangeStatusDTO()
                             {
                                 OrderId = orderId,
+                                NewStatus = OrderStatus.Paid
                             });
 
-                        var request = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Order/PaidSuccessfull", content);
+                        var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/ChangeStatusOfOrder", content);
                         var responce = JsonConvert.DeserializeObject<ExecResultModel>(await request.Content.ReadAsStringAsync());
                         if (!responce.Success)
                         {
-                            TelegramWorker.Logger.LogError("Неудалось сохранить оплату по причине\n" + responce.Message);
+                            TelegramWorker.Logger.LogError("Не удалось сохранить оплату по причине\n" + responce.Message);
+                            return;
                         }
 
+                        content = JsonContent.Create(
+                            new ChangeStatusDTO()
+                            {
+                                OrderId = orderId,
+                                NewStatus = OrderStatus.Archived
+                            });
+
+                        request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/ChangeStatusOfOrder", content);
+                        responce = JsonConvert.DeserializeObject<ExecResultModel>(await request.Content.ReadAsStringAsync());
+                        if (responce.Success)
+                        {
+                            TelegramWorker.Logger.LogError($"Заказ с № {orderId} помещён в архив");
+                        }
+                        else
+                        {
+                            TelegramWorker.Logger.LogError($"Не удалось поместить в архив заказ с № {orderId}\n" + responce.Message);
+                            return;
+                        }
                     }
 
                     var configuration = new ConfigurationBuilder()
@@ -106,5 +133,11 @@ public class PaymentCommand : ICommand
                 }
             }
         }
+        catch
+        {
+            
+        }
+
+        
     }
 }

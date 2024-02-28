@@ -8,8 +8,9 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace WoodWebAPI.Worker.Controller.Commands
 {
-    public class SignUpCommand : ICommand
+    public class SignUpCommand(IWorkerCreds workerCreds) : ICommand
     {
+        private readonly IWorkerCreds _workerCreds = workerCreds;
         public TelegramBotClient Client => TelegramWorker.API;
 
         public CommandExecutor Executor { get; }
@@ -19,74 +20,81 @@ namespace WoodWebAPI.Worker.Controller.Commands
         public async Task Execute(Update update, CancellationToken cancellationToken)
         {
 
-            if (!cancellationToken.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
-                var messageId = 0;
-                
-                if (update.Type == UpdateType.CallbackQuery)
+                return;
+            }
+
+            var messageId = 0;
+
+            if (update.Type == UpdateType.CallbackQuery)
+            {
+                messageId = update.CallbackQuery.Message.MessageId;
+            }
+            else if (update.Type == UpdateType.Message)
+            {
+                messageId = update.Message.MessageId;
+            }
+
+            var chatId = update.CallbackQuery.From.Id;
+
+            using HttpClient httpClient = new();
+
+            CreateCustomerDTO customerDTO = new()
+            {
+                Name = new string((update.CallbackQuery.From.FirstName ?? "anonymous") + (" " + update.CallbackQuery.From.LastName ?? $" {Guid.NewGuid()}")),
+                TelegtamId = chatId,
+                Username = update.CallbackQuery.From.Username ?? $" {Guid.NewGuid()}",
+            };
+
+            RegisterModel regCustomerDTO = new()
+            {
+                TelegramID = chatId.ToString(),
+            };
+
+            var contentCustomer = JsonContent.Create(customerDTO);
+            var contentRegCustomer = JsonContent.Create(regCustomerDTO);
+
+            var resultCustomer = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Customer/CreateCustomers", contentCustomer, cancellationToken: cancellationToken);
+            var resultRegCustomer = await httpClient.PostAsJsonAsync($"{_workerCreds.BaseURL}/api/Authenticate/Register", contentRegCustomer, cancellationToken: cancellationToken);
+
+            if (resultCustomer.IsSuccessStatusCode && resultRegCustomer.IsSuccessStatusCode)
+            {
+                WebAppInfo webAppInfo = new()
                 {
-                    messageId = update.CallbackQuery.Message.MessageId;
-                }
-                else if (update.Type == UpdateType.Message)
+                    Url = "https://woodcutters.mydurable.com/"
+                };
+
+                var inlineMarkup = new InlineKeyboardMarkup(new[]
                 {
-                    messageId = update.Message.MessageId;
-                }
-
-                var chatId = update.CallbackQuery.From.Id;
-
-                using (HttpClient httpClient = new HttpClient())
-                {
-                    CreateCustomerDTO customerDTO = new CreateCustomerDTO()
-                    {
-                        Name = new string((update.CallbackQuery.From.FirstName ?? "anonymous") + (" " + update.CallbackQuery.From.LastName ?? $" {Guid.NewGuid()}")),
-                        TelegtamId = chatId.ToString(),
-                        Username = update.CallbackQuery.From.Username ?? $" {Guid.NewGuid()}",
-                    };
-
-                    var contentCustomer = JsonContent.Create(customerDTO);
-
-                    var resultCustomer = await httpClient.PostAsync($"{TelegramWorker.BaseUrl}/api/Customer/CreateCustomers", contentCustomer);
-                    //var resultUser = await httpClient.PostAsJsonAsync("http://localhost:5550/api/Authenticate/register", contentUser);
-
-                    if (resultCustomer.IsSuccessStatusCode) //&& resultUser.IsSuccessStatusCode)
-                    {
-
-                        WebAppInfo webAppInfo = new WebAppInfo();
-
-                        webAppInfo.Url = "https://woodcutters.mydurable.com/";
-                        var inlineMarkup = new InlineKeyboardMarkup(new[] 
-                        { 
                             InlineKeyboardButton.WithWebApp(
                                 text: "О нас",
                                 webAppInfo),
 
                             InlineKeyboardButton.WithCallbackData(
                                 text: "Продолжить в боте",
-                                callbackData: "/main")                              
-                        });
-                        
-                        await Client.EditMessageTextAsync(
-                            chatId: chatId, 
-                            text: "Поздравляем с регистарцией!"
-                            +"\nПосле регистрации Выберите действие", 
-                            messageId: messageId,
-                            replyMarkup: inlineMarkup,
-                            cancellationToken: cancellationToken
-                            );
-            
-                    }
-                    else
-                    {
-                        await Client.EditMessageTextAsync(
-                            chatId: chatId,
-                            text: "ОШИБКА В РЕГИСТРАЦИИ",
-                            replyMarkup: new InlineKeyboardMarkup(
-                                inlineKeyboardButton: InlineKeyboardButton.WithCallbackData("В начало","/start")),
-                            messageId: messageId,
-                            cancellationToken: cancellationToken
-                            );
-                    }
-                }
+                                callbackData: "/main")
+                });
+
+                await Client.EditMessageTextAsync(
+                    chatId: chatId,
+                    text: "Поздравляем с регистарцией!"
+                    + "\nПосле регистрации Выберите действие",
+                    messageId: messageId,
+                    replyMarkup: inlineMarkup,
+                    cancellationToken: cancellationToken
+                    );
+            }
+            else
+            {
+                await Client.EditMessageTextAsync(
+                    chatId: chatId,
+                    text: "ОШИБКА В РЕГИСТРАЦИИ",
+                    replyMarkup: new InlineKeyboardMarkup(
+                        inlineKeyboardButton: InlineKeyboardButton.WithCallbackData("В начало", "/start")),
+                    messageId: messageId,
+                    cancellationToken: cancellationToken
+                    );
             }
         }
     }

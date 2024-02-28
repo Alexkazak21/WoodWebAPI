@@ -7,11 +7,11 @@ namespace WoodWebAPI.Worker.Controller
 {
     [Route("/")]
     [ApiController]
-    public class BotController : ControllerBase
+    public class BotController(ILogger<BotController> logger,IWorkerCreds workerCreds) : ControllerBase
     {
         private readonly TelegramBotClient _bot = TelegramWorker.API;
-        private readonly ILogger<TelegramWorker> _logger = TelegramWorker.Logger;
-        private readonly UpdateDistributor<CommandExecutor> _distributor = new UpdateDistributor<CommandExecutor>();
+        private readonly ILogger<BotController>? _logger = logger;
+        private readonly UpdateDistributor _distributor = new(workerCreds);
 
         [HttpPost]
         public async void Post(Update update, CancellationToken cancellationToken)
@@ -25,7 +25,7 @@ namespace WoodWebAPI.Worker.Controller
             else if (update.CallbackQuery != null && update.Message == null)
             {
                 _logger.LogInformation(DateTime.UtcNow +" +3" + $"\n\tCallback Query from {update.CallbackQuery.From.Id}"
-                    + $"\n\tWith text:   {update.CallbackQuery.Data}");
+                    + $"\n\tWith text:   {update.CallbackQuery.Data}" + $"\nWith message ID = {update.CallbackQuery.Message.MessageId}");
 
                 await _distributor.HandleUpdateAsync(_bot, update, cancellationToken);
             }
