@@ -19,7 +19,7 @@ public partial class Order
 public enum OrderStatus
 {
     NewOrder,
-    Canceled,
+    Approved,
     Verivied,
     CanceledByAdmin,
     Completed,

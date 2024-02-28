@@ -16,65 +16,69 @@ public class MainCommand(IWorkerCreds workerCreds) : ICommand
 
     public async Task Execute(Update update, CancellationToken cancellationToken)
     {
-        if (!cancellationToken.IsCancellationRequested)
+        if (cancellationToken.IsCancellationRequested || update == null)
         {
-            if (update != null)
+            return;
+        }
+
+        try
+        {
+            var userExist = false;
+
+            long chatid = -1;
+
+            var messageId = 0;
+
+            bool continueAsUser = false;
+            bool isAdmin = false;
+
+            string[]? commandParts = null;
+            if (update.Type == UpdateType.Message)
             {
-                var userExist = false;
+                chatid = update.Message.Chat.Id;
 
-                long chatid = -1;
+                messageId = update.Message.MessageId;
 
-                var messageId = 0;
+                if (TelegramWorker.AdminList.Find(x => x.TelegramId == chatid.ToString() && x.AdminRole == 1) != null) { isAdmin = true; }
 
-                bool continueAsUser = false;
-                bool isAdmin = false;
+                userExist = await new CommonChecks(_workerCreds).CheckCustomer(chatid, cancellationToken);
+            }
+            else if (update.Type == UpdateType.CallbackQuery)
+            {
+                chatid = update.CallbackQuery.From.Id;
 
-                string[]? commandParts = null;
-                if (update.Type == UpdateType.Message)
+                messageId = update.CallbackQuery.Message.MessageId;
+
+                if (TelegramWorker.AdminList.Find(x => x.TelegramId == chatid.ToString() && x.AdminRole == 1) != null) { isAdmin = true; }
+
+                userExist = await new CommonChecks(_workerCreds).CheckCustomer(chatid, cancellationToken);
+
+                commandParts = update.CallbackQuery.Data.Split(":");
+
+                if (commandParts.Length > 1 && commandParts[1] == "true")
                 {
-                    chatid = update.Message.Chat.Id;
-
-                    messageId = update.Message.MessageId;
-
-                    if (TelegramWorker.AdminList.Find(x => x.TelegramId == chatid.ToString() && x.AdminRole == 1) != null) { isAdmin = true; }
-
-                    userExist = await new CommonChecks(_workerCreds).CheckCustomer(chatid, cancellationToken);
+                    continueAsUser = true;
                 }
-                else if (update.Type == UpdateType.CallbackQuery)
+            }
+
+            if ((userExist && chatid != -1 && !isAdmin) || continueAsUser)
+            {
+                var orders = await new CommonChecks(_workerCreds).CheckOrdersOfCustomer(chatid, cancellationToken);
+
+                //orders = orders.Where(x => x.Status < OrderStatus.Archived).ToArray();
+                if (orders != null)
                 {
-                    chatid = update.CallbackQuery.From.Id;
-
-                    messageId = update.CallbackQuery.Message.MessageId;
-
-                    if (TelegramWorker.AdminList.Find(x => x.TelegramId == chatid.ToString() && x.AdminRole == 1) != null) { isAdmin = true; }
-
-                    userExist = await new CommonChecks(_workerCreds).CheckCustomer(chatid, cancellationToken);
-
-                    commandParts = update.CallbackQuery.Data.Split(":");
-
-                   if( commandParts.Length > 1  && commandParts[1] == "true")
-                   {
-                        continueAsUser = true;
-                   }
-                }
-
-                if ((userExist && chatid != -1 && !isAdmin) || continueAsUser)
-                {
-                    var orders = await new CommonChecks(_workerCreds).CheckOrdersOfCustomer(chatid, cancellationToken);
-
-                    if (orders != null)
+                    if (orders.Length == 0)
                     {
-                        if (orders.Length == 0)
+                        try
                         {
-                            try
-                            {
-                                await Client.EditMessageTextAsync(
-                                chatId: chatid,
-                                text: "У вас пока нет заказов. \nХотите создать заказ?",
-                                messageId: messageId,
-                                replyMarkup: new InlineKeyboardMarkup(
-                                                new[]
-                                                {
+                            await Client.EditMessageTextAsync(
+                            chatId: chatid,
+                            text: "У вас пока нет заказов. \nХотите создать заказ?",
+                            messageId: messageId,
+                            replyMarkup: new InlineKeyboardMarkup(
+                                            new[]
+                                            {
                                                     new[]
                                                     {
                                                         InlineKeyboardButton.WithCallbackData("Создать заказ","/new_order"),
@@ -83,77 +87,77 @@ public class MainCommand(IWorkerCreds workerCreds) : ICommand
                                                     {
                                                         InlineKeyboardButton.WithCallbackData("Главное меню","/main"),
                                                     }
-                                                }),
-                                cancellationToken: cancellationToken);
-                            }
-                            catch (ApiRequestException ex) 
-                            {
-                                if(update.CallbackQuery == null)
-                                {
-                                    await Client.SendTextMessageAsync(
-                                        chatId: chatid,
-                                        text: "Вы и так находитесь в Главном меню" +
-                                        "\nУ вас пока нет заказов. " +
-                                        "\nХотите создать заказ?",
-                                        replyMarkup: new InlineKeyboardMarkup(
-                                               new[]
-                                               {
-                                                    new[]
-                                                    {
-                                                        InlineKeyboardButton.WithCallbackData("Создать заказ","/new_order"),
-                                                    }
-                                               }),
-                                        cancellationToken: cancellationToken);
-                                }
-                                else 
-                                {
-                                    await Client.EditMessageTextAsync(
-                                        chatId: chatid,
-                                        text: "Вы и так находитесь в Главном меню" +
-                                        "\nУ вас пока нет заказов. " +
-                                        "\nХотите создать заказ?",
-                                        messageId: messageId,
-                                        replyMarkup: new InlineKeyboardMarkup(
-                                               new[]
-                                               {
-                                                    new[]
-                                                    {
-                                                        InlineKeyboardButton.WithCallbackData("Создать заказ","/new_order"),
-                                                    }
-                                               }),
-                                        cancellationToken: cancellationToken);
-                                }
-                                
-                            }
+                                            }),
+                            cancellationToken: cancellationToken);
                         }
-                        else if (orders.Length >= 5)
+                        catch (ApiRequestException ex)
                         {
-                            await Client.EditMessageTextAsync(
-                                chatId: chatid,
-                                text: "Максимальное колличество одновременных заказов 4",
-                                messageId: messageId,
-                                replyMarkup: new InlineKeyboardMarkup(
-                                                new[]
-                                                {
+                            if (update.CallbackQuery == null)
+                            {
+                                await Client.SendTextMessageAsync(
+                                    chatId: chatid,
+                                    text: "Вы и так находитесь в Главном меню" +
+                                    "\nУ вас пока нет заказов. " +
+                                    "\nХотите создать заказ?",
+                                    replyMarkup: new InlineKeyboardMarkup(
+                                           new[]
+                                           {
+                                                    new[]
+                                                    {
+                                                        InlineKeyboardButton.WithCallbackData("Создать заказ","/new_order"),
+                                                    }
+                                           }),
+                                    cancellationToken: cancellationToken);
+                            }
+                            else
+                            {
+                                await Client.EditMessageTextAsync(
+                                    chatId: chatid,
+                                    text: "Вы и так находитесь в Главном меню" +
+                                    "\nУ вас пока нет заказов. " +
+                                    "\nХотите создать заказ?",
+                                    messageId: messageId,
+                                    replyMarkup: new InlineKeyboardMarkup(
+                                           new[]
+                                           {
+                                                    new[]
+                                                    {
+                                                        InlineKeyboardButton.WithCallbackData("Создать заказ","/new_order"),
+                                                    }
+                                           }),
+                                    cancellationToken: cancellationToken);
+                            }
+
+                        }
+                    }
+                    else if (orders.Length >= 5)
+                    {
+                        await Client.EditMessageTextAsync(
+                            chatId: chatid,
+                            text: "Максимальное колличество одновременных заказов 4",
+                            messageId: messageId,
+                            replyMarkup: new InlineKeyboardMarkup(
+                                            new[]
+                                            {
                                                     InlineKeyboardButton.WithCallbackData("К заказам","/main"),
-                                                }),
-                                cancellationToken: cancellationToken);
-                        }
-                        else if (orders != null && orders.Length < 5)
+                                            }),
+                            cancellationToken: cancellationToken);
+                    }
+                    else if (orders != null && orders.Length < 5)
+                    {
+                        var keybordButtons = new List<InlineKeyboardButton>();
+                        for (int i = 0; i < orders.Length; i++)
                         {
-                            var keybordButtons = new List<InlineKeyboardButton>();
-                            for (int i = 0; i < orders.Length; i++)
-                            {
-                                keybordButtons.Add(
-                                    InlineKeyboardButton.WithCallbackData($"{orders[i].Id}", $"/show_order:{orders[i].Id}"));
+                            keybordButtons.Add(
+                                InlineKeyboardButton.WithCallbackData($"{orders[i].Id}", $"/show_order:{orders[i].Id}"));
 
-                            }
+                        }
 
-                            InlineKeyboardMarkup? keyboard = null;
-                            if (orders.Length < 4)
+                        InlineKeyboardMarkup? keyboard = null;
+                        if (orders.Length < 4)
+                        {
+                            keyboard = new InlineKeyboardMarkup(new[]
                             {
-                                keyboard = new InlineKeyboardMarkup(new[]
-                                {
                                         keybordButtons.ToArray<InlineKeyboardButton>(),
                                         [
                                             InlineKeyboardButton.WithCallbackData("Добавить заказ", "/new_order"),
@@ -162,57 +166,57 @@ public class MainCommand(IWorkerCreds workerCreds) : ICommand
                                             InlineKeyboardButton.WithCallbackData("Удалить заказ", "/delete_order"),
                                             ]
                                     });
-                            }
-                            else
+                        }
+                        else
+                        {
+                            keyboard = new InlineKeyboardMarkup(new[]
                             {
-                                keyboard = new InlineKeyboardMarkup(new[]
-                                {
                                         keybordButtons.ToArray<InlineKeyboardButton>(),
                                         [
                                             InlineKeyboardButton.WithCallbackData("Удалить заказ", "/delete_order"),
                                         ]
                                     });
-                            }
+                        }
 
 
 
-                            if (update.Type == UpdateType.CallbackQuery)
-                            {
-                                await Client.EditMessageTextAsync(
-                                chatId: chatid,
-                                text: "Выберите заказ",
-                                messageId: update.CallbackQuery.Message.MessageId,
-                                replyMarkup: keyboard,
-                                cancellationToken: cancellationToken);
-                            }
-                            else
-                            {
-                                await Client.SendTextMessageAsync(
-                                                                chatId: chatid,
-                                                                text: "Выберите заказ",
-                                                                replyMarkup: keyboard,
-                                                                cancellationToken: cancellationToken);
-                            }
+                        if (update.Type == UpdateType.CallbackQuery)
+                        {
+                            await Client.EditMessageTextAsync(
+                            chatId: chatid,
+                            text: "Выберите заказ",
+                            messageId: update.CallbackQuery.Message.MessageId,
+                            replyMarkup: keyboard,
+                            cancellationToken: cancellationToken);
+                        }
+                        else
+                        {
+                            await Client.SendTextMessageAsync(
+                                                            chatId: chatid,
+                                                            text: "Выберите заказ",
+                                                            replyMarkup: keyboard,
+                                                            cancellationToken: cancellationToken);
                         }
                     }
-                    else
-                    {
-                        TelegramWorker.Logger.LogError(
-                            $"MainCommand \tНе существует объект {nameof(orders)}", cancellationToken);
-                    }
                 }
-                else if (userExist && chatid != -1 && isAdmin)
+                else
                 {
-                    await Client.DeleteMyCommandsAsync(BotCommandScope.Chat(chatid));
+                    TelegramWorker.Logger.LogError(
+                        $"MainCommand \tНе существует объект {nameof(orders)}", cancellationToken);
+                }
+            }
+            else if (userExist && chatid != -1 && isAdmin)
+            {
+                await Client.DeleteMyCommandsAsync(BotCommandScope.Chat(chatid));
 
-                    var commands = new List<BotCommand>()
+                var commands = new List<BotCommand>()
                     {
                         new BotCommand()
                         {
                             Command = "start",
                             Description = "В начало"
                         },
-                        new BotCommand() 
+                        new BotCommand()
                         {
                             Command = "order_manage",
                             Description = "Управление заказами"
@@ -239,11 +243,11 @@ public class MainCommand(IWorkerCreds workerCreds) : ICommand
                         }
                     };
 
-                    await Client.SetMyCommandsAsync(commands, BotCommandScope.Chat(chatid));                  
+                await Client.SetMyCommandsAsync(commands, BotCommandScope.Chat(chatid));
 
-                    InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup(                            
-                            new[]
-                            {
+                InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup(
+                        new[]
+                        {
                                 new[]
                                 {
                                     InlineKeyboardButton.WithCallbackData("Управление администраторами", "/admin_manage"),
@@ -255,41 +259,48 @@ public class MainCommand(IWorkerCreds workerCreds) : ICommand
                                 new[]
                                 {
                                      InlineKeyboardButton.WithCallbackData("Продолжить как пользователь", "/main:true"),
-                                }                                
-                            });
-                    if (update.Type == UpdateType.CallbackQuery)
-                    {
-                         await Client.EditMessageTextAsync(
-                                            chatId: chatid,
-                                            text: "\nВы Администратор\nВыберите операцию",
-                                            messageId: update.CallbackQuery.Message.MessageId,
-                                            replyMarkup: keyboard,
-                                            cancellationToken: cancellationToken);
-                    }
-                    else
-                    {
-                        await Client.SendTextMessageAsync(
-                                                        chatId: chatid,
-                                                        text: "\nВы Администратор\nВыберите операцию",
-                                                        replyMarkup: keyboard,
-                                                        cancellationToken: cancellationToken);
-                    }
+                                }
+                        });
+                if (update.Type == UpdateType.CallbackQuery)
+                {
+                    await Client.EditMessageTextAsync(
+                                       chatId: chatid,
+                                       text: "\nВы Администратор\nВыберите операцию",
+                                       messageId: update.CallbackQuery.Message.MessageId,
+                                       replyMarkup: keyboard,
+                                       cancellationToken: cancellationToken);
                 }
                 else
                 {
-                    var keyboardUserNotExist = new InlineKeyboardMarkup(
-                        new[]
-                        {
-                            InlineKeyboardButton.WithCallbackData("Регистрация", "signUp"),
-                        });
-
                     await Client.SendTextMessageAsync(
-                        chatId: chatid,
-                        text: "Для продолжения, зарегистрируйтесь",
-                        replyMarkup: keyboardUserNotExist,
-                        cancellationToken: cancellationToken);
+                                                    chatId: chatid,
+                                                    text: "\nВы Администратор\nВыберите операцию",
+                                                    replyMarkup: keyboard,
+                                                    cancellationToken: cancellationToken);
                 }
             }
+            else
+            {
+                var keyboardUserNotExist = new InlineKeyboardMarkup(
+                    new[]
+                    {
+                            InlineKeyboardButton.WithCallbackData("Регистрация", "signUp"),
+                    });
+
+                await Client.SendTextMessageAsync(
+                    chatId: chatid,
+                    text: "Для продолжения, зарегистрируйтесь",
+                    replyMarkup: keyboardUserNotExist,
+                    cancellationToken: cancellationToken);
+            }
+        }
+        catch (ArgumentNullException ex)
+        {
+            TelegramWorker.Logger.LogWarning($"Нет данных в {ex.ParamName}");
+        }
+        catch (Exception ex)
+        {
+            TelegramWorker.Logger.LogWarning($"{ex.Message}");
         }
     }
 }

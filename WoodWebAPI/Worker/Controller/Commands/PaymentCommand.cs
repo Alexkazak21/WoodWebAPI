@@ -19,7 +19,12 @@ public class PaymentCommand(IWorkerCreds workerCreds) : ICommand
 
     public async Task Execute(Update update, CancellationToken cancellationToken)
     {
-        if (update != null)
+        if (update == null)
+        {
+            return;
+        }
+
+        try
         {
             if (update.CallbackQuery != null)
             {
@@ -71,18 +76,38 @@ public class PaymentCommand(IWorkerCreds workerCreds) : ICommand
                     using (HttpClient httpClient = new HttpClient())
                     {
                         var content = JsonContent.Create(
-                            new VerifyOrderDTO()
+                            new ChangeStatusDTO()
                             {
                                 OrderId = orderId,
+                                NewStatus = OrderStatus.Paid
                             });
 
-                        var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/PaidSuccessfull", content);
+                        var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/ChangeStatusOfOrder", content);
                         var responce = JsonConvert.DeserializeObject<ExecResultModel>(await request.Content.ReadAsStringAsync());
                         if (!responce.Success)
                         {
-                            TelegramWorker.Logger.LogError("Неудалось сохранить оплату по причине\n" + responce.Message);
+                            TelegramWorker.Logger.LogError("Не удалось сохранить оплату по причине\n" + responce.Message);
+                            return;
                         }
 
+                        content = JsonContent.Create(
+                            new ChangeStatusDTO()
+                            {
+                                OrderId = orderId,
+                                NewStatus = OrderStatus.Archived
+                            });
+
+                        request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/ChangeStatusOfOrder", content);
+                        responce = JsonConvert.DeserializeObject<ExecResultModel>(await request.Content.ReadAsStringAsync());
+                        if (responce.Success)
+                        {
+                            TelegramWorker.Logger.LogError($"Заказ с № {orderId} помещён в архив");
+                        }
+                        else
+                        {
+                            TelegramWorker.Logger.LogError($"Не удалось поместить в архив заказ с № {orderId}\n" + responce.Message);
+                            return;
+                        }
                     }
 
                     var configuration = new ConfigurationBuilder()
@@ -108,5 +133,11 @@ public class PaymentCommand(IWorkerCreds workerCreds) : ICommand
                 }
             }
         }
+        catch
+        {
+            
+        }
+
+        
     }
 }

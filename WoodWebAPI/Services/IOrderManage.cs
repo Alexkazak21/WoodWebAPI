@@ -12,7 +12,5 @@ public interface IOrderManage
     Task<ExecResultModel> ArchiveByAdminAsync(ArchiveOrderDTO model);
     Task<OrderModel[]?> GetOrdersOfCustomerAsync(GetOrdersDTO model);
     Task<OrderModel[]?> GetFullOrdersArrayAsync();
-    Task<ExecResultModel> VerifyOrderByAdminAsync(VerifyOrderDTO model);
-    Task<ExecResultModel> CompleteOrderByAdminAsync(VerifyOrderDTO model);
-    Task<ExecResultModel> PaidSuccessfullyAsync(VerifyOrderDTO model);
+    Task<ExecResultModel> ChangeStatusOfOrderAsync(ChangeStatusDTO model);
 }

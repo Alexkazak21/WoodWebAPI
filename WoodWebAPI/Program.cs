@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using System.Reflection;
 using System.Text;
 using WoodWebAPI.Auth;
 using WoodWebAPI.Data;
@@ -115,6 +116,10 @@ namespace WoodWebAPI
                         new string[] {}
                     }
                 });
+                // Adding XML documentation to methods
+                //var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                //var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                //c.IncludeXmlComments(xmlPath);
             });
 
             builder.Services.AddDbContext<WoodDBContext>(options => options.UseSqlServer(configuration.GetConnectionString("ConnStrWood")));
@@ -122,21 +127,6 @@ namespace WoodWebAPI
             builder.Services.AddScoped<IOrderManage, OrderManageService>();
             builder.Services.AddScoped<IOrderPositionManage, OrderPositionManageService>();
             builder.Services.AddSingleton<IWorkerCreds, TelegramWorkerCreds>();
-            builder.Services.AddScoped<ICommand,StartCommand>();
-            builder.Services.AddScoped<ICommand,CancelCommand>();
-            builder.Services.AddScoped<ICommand, SignUpCommand>();
-            builder.Services.AddScoped<ICommand, LoginCommand>();
-            builder.Services.AddScoped<ICommand, MainCommand>();
-            builder.Services.AddScoped<ICommand, AddOrderCommand>();
-            builder.Services.AddScoped<ICommand, DeleteOrderCommand>();
-            builder.Services.AddScoped<ICommand, ShowOrderCommand>();
-            builder.Services.AddScoped<ICommand, AddOrderPositionCommand>();
-            builder.Services.AddScoped<ICommand, ClearCommand>();
-            builder.Services.AddScoped<ICommand, AlterOrderPositionCommand>();
-            builder.Services.AddScoped<ICommand, RegAdminCommand>();
-            builder.Services.AddScoped<ICommand, OrderManageCommand>();
-            builder.Services.AddScoped<ICommand, AdminManageCommand>();
-            builder.Services.AddScoped<ICommand, PaymentCommand>();
 
             builder.Services.AddLogging();
 

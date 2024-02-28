@@ -43,7 +43,7 @@ public class StartCommand(IWorkerCreds workerCreds) : ICommand
         }
     }
 
-    private async Task SendButtonsAsync(long chatId, int messageId = -1, string userFirstName = null, CancellationToken cancellationToken = default)
+    private async Task SendButtonsAsync(long chatId, int messageId = -1, string? userFirstName = null, CancellationToken cancellationToken = default)
     {
         var userExist = false;
         using (HttpClient client = new HttpClient())

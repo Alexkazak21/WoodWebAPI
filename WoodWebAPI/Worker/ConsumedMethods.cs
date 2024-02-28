@@ -41,7 +41,7 @@ public class ConsumedMethods(IWorkerCreds workerCreds)
             if (existCheck.HasRows)
             {
                 await connection.CloseAsync();
-                return new ExecResultModel { Success = true, Message = "В базе данных присутствуют значения" };
+                return new ExecResultModel { Success = true, Message = "В базе данных присутствуют значения согласно ГОСТ" };
             }
             else 
             {
@@ -56,19 +56,5 @@ public class ConsumedMethods(IWorkerCreds workerCreds)
                 return new ExecResultModel { Success = true, Message = "Данные в базу успешно добавлены можно работать" };
             }
         }
-    }
-
-    public static  bool IsValidTransition(OrderStatus currentStatus, OrderStatus newStatus)
-    {
-        return currentStatus switch
-        {
-            OrderStatus.NewOrder => newStatus == OrderStatus.Canceled || newStatus == OrderStatus.Verivied,
-            OrderStatus.Canceled => newStatus == OrderStatus.Archived,
-            OrderStatus.Verivied => newStatus == OrderStatus.Completed || newStatus == OrderStatus.CanceledByAdmin,
-            OrderStatus.CanceledByAdmin => newStatus == OrderStatus.Archived,
-            OrderStatus.Completed => newStatus == OrderStatus.Paid,
-            OrderStatus.Paid => newStatus == OrderStatus.Archived,
-            _ => false,
-        };
     }
 }

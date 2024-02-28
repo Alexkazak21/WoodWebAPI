@@ -3,6 +3,7 @@ using WoodWebAPI.Data;
 using WoodWebAPI.Data.Entities;
 using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Order;
+using WoodWebAPI.Services.Extensions;
 using WoodWebAPI.Worker;
 
 namespace WoodWebAPI.Services
@@ -155,7 +156,7 @@ namespace WoodWebAPI.Services
             try
             {
                 var ordersArray = await _db.Orders
-                .Where(x => x.CustomerTelegramId == model.CustomerTelegramId)
+                .Where(x => x.CustomerTelegramId == model.CustomerTelegramId && x.Status < OrderStatus.Archived)
                 .Include(x => x.OrderPositions)
                 .Select(x => new OrderModel
                 {
@@ -183,21 +184,21 @@ namespace WoodWebAPI.Services
         }
 
 
-        public async Task<ExecResultModel> VerifyOrderByAdminAsync(VerifyOrderDTO model)
+        public async Task<ExecResultModel> ChangeStatusOfOrderAsync(ChangeStatusDTO model)
         {
             try
             {
-                var order = await _db.Orders.Where(x => x.Status == OrderStatus.NewOrder && x.Id == model.OrderId).FirstAsync();
-                var isValid = ConsumedMethods.IsValidTransition(order.Status, OrderStatus.Verivied);
-                if (isValid) 
+                var order = await _db.Orders.Where(x => x.Id == model.OrderId).FirstAsync();
+                var isValidStatus = order.ChangeStatus(model.NewStatus);
+                if (isValidStatus)
                 {
-                    order.Status = OrderStatus.Verivied;
+                    order.Status = model.NewStatus;
                     await _db.SaveChangesAsync();
 
                     return new ExecResultModel()
                     {
                         Success = true,
-                        Message = "Заказ принят в работу",
+                        Message = "Статус заказа успешно изменён",
                     };
                 }
 
@@ -223,80 +224,6 @@ namespace WoodWebAPI.Services
                     Message = "БД занята, попробуйте позже"
                 };
             }
-        }
-
-        public async Task<ExecResultModel> CompleteOrderByAdminAsync(VerifyOrderDTO model)
-        {
-            throw new NotFiniteNumberException();
-            //if (model != null)
-            //{
-            //    var orders = await _db.Orders.Where(x => x.IsVerified == true && x.Id == model.OrderId).FirstOrDefaultAsync();
-
-            //    if (orders != null)
-            //    {
-            //        orders.IsCompleted = true;
-            //        await _db.SaveChangesAsync();
-
-            //        return new ExecResultModel()
-            //        {
-            //            Success = true,
-            //            Message = "Заказ завершён",
-            //        };
-            //    }
-            //    else
-            //    {
-            //        return new ExecResultModel()
-            //        {
-            //            Success = false,
-            //            Message = "Выбранный заказ не пренадлежит указанному пользователю или уже подтверждён",
-            //        };
-            //    }
-            //}
-            //else
-            //{
-            //    return new ExecResultModel()
-            //    {
-            //        Success = false,
-            //        Message = "Входная модель оказалась пуста",
-            //    };
-            //}
-        }
-
-        public async Task<ExecResultModel> PaidSuccessfullyAsync(VerifyOrderDTO model)
-        {
-            throw new NotImplementedException();
-            //if (model != null)
-            //{
-            //    var orders = await _db.Orders.Where(x => x.IsVerified == true && x.IsCompleted == true && x.IsPaid == false && x.Id == model.OrderId).FirstOrDefaultAsync();
-
-            //    if (orders != null)
-            //    {
-            //        orders.IsPaid = true;
-            //        await _db.SaveChangesAsync();
-
-            //        return new ExecResultModel()
-            //        {
-            //            Success = true,
-            //            Message = "Заказ закрыт",
-            //        };
-            //    }
-            //    else
-            //    {
-            //        return new ExecResultModel()
-            //        {
-            //            Success = false,
-            //            Message = "Выбранный заказ не пренадлежит указанному пользователю или уже подтверждён",
-            //        };
-            //    }
-            //}
-            //else
-            //{
-            //    return new ExecResultModel()
-            //    {
-            //        Success = false,
-            //        Message = "Входная модель оказалась пуста",
-            //    };
-            //}
         }
     }
 }

@@ -88,35 +88,9 @@ namespace WoodWebAPI.Controllers
 
         //[Authorize]
         [HttpPost]
-        public async Task<ExecResultModel> VerifyOrderByAdmin(VerifyOrderDTO model)
+        public async Task<ExecResultModel> ChangeStatusOfOrder(ChangeStatusDTO model)
         {
-            var data = await _entityService.VerifyOrderByAdminAsync(model);
-
-            if (data.Success)
-            {
-                return data;
-            }
-
-            return data;
-        }
-
-        [HttpPost]
-        public async Task<ExecResultModel> CompleteOrderByAdmin(VerifyOrderDTO model)
-        {
-            var data = await _entityService.CompleteOrderByAdminAsync(model);
-
-            if (data.Success)
-            {
-                return data;
-            }
-
-            return data;
-        }
-
-        [HttpPost]
-        public async Task<ExecResultModel> PaidSuccessfull(VerifyOrderDTO model)
-        {
-            var data = await _entityService.PaidSuccessfullyAsync(model);
+            var data = await _entityService.ChangeStatusOfOrderAsync(model);
 
             if (data.Success)
             {

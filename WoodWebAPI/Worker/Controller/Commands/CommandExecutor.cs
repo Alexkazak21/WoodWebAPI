@@ -15,7 +15,7 @@ public class CommandExecutor(IWorkerCreds workerCreds) : IUpdateHandler
             new SignUpCommand(workerCreds),
             new LoginCommand(workerCreds),
             new MainCommand(workerCreds),
-            new AddOrderCommand(workerCreds),
+            new NewOrderCommand(workerCreds),
             new DeleteOrderCommand(workerCreds),
             new ShowOrderCommand(workerCreds),
             new AddOrderPositionCommand(workerCreds),
