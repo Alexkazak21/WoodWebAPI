@@ -1,18 +1,15 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using System.Reflection;
 using System.Text;
 using WoodWebAPI.Auth;
 using WoodWebAPI.Data;
 using WoodWebAPI.Services;
 using WoodWebAPI.Worker;
-using WoodWebAPI.Worker.Controller.Commands;
 
 namespace WoodWebAPI
 {
@@ -122,7 +119,7 @@ namespace WoodWebAPI
                 //c.IncludeXmlComments(xmlPath);
             });
 
-            builder.Services.AddDbContext<WoodDBContext>(options => options.UseSqlServer(configuration.GetConnectionString("ConnStrWood")));
+            builder.Services.AddDbContext<WoodDBContext>(options => options.UseSqlServer(configuration.GetConnectionString("ConnStrWood")), ServiceLifetime.Singleton);
             builder.Services.AddScoped<ICustomerManage, CustomerManageService>();
             builder.Services.AddScoped<IOrderManage, OrderManageService>();
             builder.Services.AddScoped<IOrderPositionManage, OrderPositionManageService>();
@@ -141,8 +138,11 @@ namespace WoodWebAPI
             //    minPrice: configuration.GetValue<string>("minPrice") ?? throw new ArgumentException("minPrice", "minPrice must be defined")
             //    );
 
-            // Adding Background service worker to work with Telegram
+
+
+            // Adding Background service worker to operate TelegramBot
             builder.Services.AddHostedService(options => new TelegramWorker(
+                options.CreateScope().ServiceProvider.GetRequiredService<WoodDBContext>(),
                 options.GetRequiredService<ILogger<TelegramWorker>>(),
                 options.GetRequiredService<IWorkerCreds>()                
                 ));            

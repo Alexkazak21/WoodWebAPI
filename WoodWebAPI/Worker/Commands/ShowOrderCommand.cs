@@ -4,11 +4,10 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using WoodWebAPI.Data.Entities;
-using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.OrderPosition;
 using WoodWebAPI.Services.Extensions;
 
-namespace WoodWebAPI.Worker.Controller.Commands
+namespace WoodWebAPI.Worker.Commands
 {
     public class ShowOrderCommand(IWorkerCreds workerCreds) : ICommand
     {
@@ -62,23 +61,23 @@ namespace WoodWebAPI.Worker.Controller.Commands
                         if (order.Id == orderId)
                         {
                             var volume = 0.0;
-                            using (HttpClient httpClient = new())
+                            using HttpClient httpClient = new();
+
+                            GetOrderPositionsByOrderIdDTO getTimbers = new()
                             {
-                                GetOrderPositionsByOrderIdDTO getTimbers = new()
-                                {
-                                    TelegramId = chatid,
-                                    OrderId = orderId,
-                                };
+                                TelegramId = chatid,
+                                OrderId = orderId,
+                            };
 
-                                var content = JsonContent.Create(getTimbers);
+                            var content = JsonContent.Create(getTimbers);
 
-                                var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/OrderPosition/GetTotalVolumeOfOrder", content);
+                            var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/OrderPosition/GetTotalVolumeOfOrder", content);
 
-                                var responce = await request.Content.ReadAsStringAsync();
-                                var result = JsonConvert.DeserializeObject<double>(responce);
+                            var responce = await request.Content.ReadAsStringAsync();
+                            var result = JsonConvert.DeserializeObject<double>(responce);
 
-                                volume = result;
-                            }
+                            volume = result;
+
 
                             var orderStatusMessage = order.OrderStatusMessage();
 
@@ -109,15 +108,15 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                 await Client.EditMessageTextAsync(
                                                 chatId: chatid,
                                                 text: $"Ваш заказ номер {order.Id}" +
-                                                      $"\nДата создания: {order.CreatedAt}" +
-                                                      $"\nОбъёмом: {volume} m3" +
+                                                      $"\nДата создания: {order.CreatedAt.AddHours(3)}" +
+                                                      $"\nОбъёмом: {volume:0.000} м3" +
                                                       $"\n{orderStatusMessage}" +
                                                       $"\nСумма к оплате: {ammountToPay} BYN",
                                                 messageId: update.CallbackQuery.Message.MessageId,
                                                 replyMarkup: replyMarkup,
                                                 cancellationToken: cancellationToken);
                             }
-                            else if (order.Status < OrderStatus.Verivied)
+                            else if (order.Status < OrderStatus.Verified)
                             {
                                 InlineKeyboardMarkup replyMarkup;
                                 if (volume == 0.0)
@@ -158,9 +157,9 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                 await Client.EditMessageTextAsync(
                                                 chatId: chatid,
                                                 text: $"Ваш заказ номер {order.Id}" +
-                                                      $"\nДата создания: {order.CreatedAt}" +
+                                                      $"\nДата создания: {order.CreatedAt.AddHours(3)}" +
                                                       $"\n{orderStatusMessage}" +
-                                                      $"\nОбъёмом: {volume} m3",
+                                                      $"\nОбъёмом: {volume:0.000} м3",
                                                 messageId: update.CallbackQuery.Message.MessageId,
                                                 replyMarkup: replyMarkup,
                                                 cancellationToken: cancellationToken);
@@ -181,9 +180,9 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                 await Client.EditMessageTextAsync(
                                                 chatId: chatid,
                                                 text: $"Ваш заказ номер {order.Id}" +
-                                                      $"\nДата создания: {order.CreatedAt}" +
+                                                      $"\nДата создания: {order.CreatedAt.AddHours(3)}" +
                                                       $"\n{orderStatusMessage}" +
-                                                      $"\nОбъёмом: {volume} m3",
+                                                      $"\nОбъёмом: {volume:0.000} м3",
                                                 messageId: update.CallbackQuery.Message.MessageId,
                                                 replyMarkup: replyMarkup,
                                                 cancellationToken: cancellationToken);

@@ -95,7 +95,7 @@ namespace WoodWebAPI.Services
             {
                 try
                 {
-                    var data = await _db.Orders.Where(x => x.CustomerTelegramId == model.CustomerTelegramId && x.Id == model.OrderId && x.Status == OrderStatus.Verivied).FirstAsync();
+                    var data = await _db.Orders.Where(x => x.CustomerTelegramId == model.CustomerTelegramId && x.Id == model.OrderId && x.Status == OrderStatus.Verified).FirstAsync();
                     return await Archive(data);
                 }
                 catch (ArgumentNullException)
@@ -198,14 +198,14 @@ namespace WoodWebAPI.Services
                     return new ExecResultModel()
                     {
                         Success = true,
-                        Message = "Статус заказа успешно изменён",
+                        Message = $"Статус заказа успешно изменён на {model.NewStatus}",
                     };
                 }
 
                 return new ExecResultModel()
                 {
                     Success = false,
-                    Message = $"Невозможно стенить статус заказа на {OrderStatus.Verivied}",
+                    Message = $"Невозможно стенить статус заказа на {OrderStatus.Verified}",
                 };
             }
             catch (ArgumentNullException)

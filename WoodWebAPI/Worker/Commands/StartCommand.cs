@@ -5,7 +5,7 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using WoodWebAPI.Data.Models.Customer;
 
-namespace WoodWebAPI.Worker.Controller.Commands;
+namespace WoodWebAPI.Worker.Commands;
 
 public class StartCommand(IWorkerCreds workerCreds) : ICommand
 {
@@ -46,33 +46,33 @@ public class StartCommand(IWorkerCreds workerCreds) : ICommand
     private async Task SendButtonsAsync(long chatId, int messageId = -1, string? userFirstName = null, CancellationToken cancellationToken = default)
     {
         var userExist = false;
-        using (HttpClient client = new HttpClient())
+        using HttpClient client = new();
+
+        HttpResponseMessage response = await client.PostAsync($"{_workerCreds.BaseURL}/api/Customer/GetCustomers", new StringContent(""));
+
+        if (response.IsSuccessStatusCode)
         {
-            HttpResponseMessage response = await client.PostAsync($"{_workerCreds.BaseURL}/api/Customer/GetCustomers", new StringContent(""));
+            string responseJsonContent = await response.Content.ReadAsStringAsync();
+            GetCustomerModel[] customers = JsonConvert.DeserializeObject<GetCustomerModel[]>(responseJsonContent);
 
-            if (response.IsSuccessStatusCode)
+            foreach (var customer in customers)
             {
-                string responseJsonContent = await response.Content.ReadAsStringAsync();
-                GetCustomerModel[] customers = JsonConvert.DeserializeObject<GetCustomerModel[]>(responseJsonContent);
-
-                foreach (var customer in customers)
+                try
                 {
-                    try
+                    if (customer.TelegramId == chatId)
                     {
-                        if (customer.TelegramId == chatId)
-                        {
-                            userExist = true;
-                        }
+                        userExist = true;
                     }
-                    catch (FormatException)
-                    {
-                        _logger.LogWarning("Startup command\n" +
-                            "\tНевозможно распарсить идентификатор, скорее всего он не равен типу long");
-                    }
-
                 }
+                catch (FormatException)
+                {
+                    _logger.LogWarning("Startup command\n" +
+                        "\tНевозможно распарсить идентификатор, скорее всего он не равен типу long");
+                }
+
             }
         }
+
 
         var keyboardUserExist = new InlineKeyboardMarkup(
             new[]
@@ -131,8 +131,5 @@ public class StartCommand(IWorkerCreds workerCreds) : ICommand
                     cancellationToken: cancellationToken);
             }
         }
-
-
     }
-
 }

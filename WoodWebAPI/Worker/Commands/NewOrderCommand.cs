@@ -6,9 +6,9 @@ using Telegram.Bot.Types.ReplyMarkups;
 using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Order;
 
-namespace WoodWebAPI.Worker.Controller.Commands;
+namespace WoodWebAPI.Worker.Commands;
 
-public class AddOrderCommand(IWorkerCreds workerCreds) : ICommand
+public class NewOrderCommand(IWorkerCreds workerCreds) : ICommand
 {
     private readonly IWorkerCreds _workerCreds = workerCreds;
     public TelegramBotClient Client => TelegramWorker.API;
@@ -26,48 +26,47 @@ public class AddOrderCommand(IWorkerCreds workerCreds) : ICommand
                 var messageid = update.CallbackQuery.Message.MessageId;
 
                 OrderModel[]? orderList = null;
-                using (HttpClient client = new HttpClient())
+                using HttpClient client = new();
+
+                GetOrdersDTO getOrders = new GetOrdersDTO()
                 {
-                    GetOrdersDTO getOrders = new GetOrdersDTO()
-                    {
-                        CustomerTelegramId = chatid,
-                    };
-                    var content = JsonContent.Create(getOrders);
+                    CustomerTelegramId = chatid,
+                };
+                var content = JsonContent.Create(getOrders);
 
-                    var responce = await client.PostAsync($"{_workerCreds.BaseURL}/api/Order/GetOrdersOfCustomer", content, cancellationToken);
+                var responce = await client.PostAsync($"{_workerCreds.BaseURL}/api/Order/GetOrdersOfCustomer", content, cancellationToken);
 
-                    orderList = JsonConvert.DeserializeObject<OrderModel[]?>(await responce.Content.ReadAsStringAsync(cancellationToken));
-                }
+                orderList = JsonConvert.DeserializeObject<OrderModel[]?>(await responce.Content.ReadAsStringAsync(cancellationToken));
+
 
                 if (orderList != null && orderList.Count() < 4)
                 {
-                    using (HttpClient client = new HttpClient())
+
+                    GetOrdersDTO createOrder = new()
                     {
-                        GetOrdersDTO createOrder = new()
-                           {
-                                CustomerTelegramId = chatid,
-                           };
-                        var content = JsonContent.Create(createOrder);
+                        CustomerTelegramId = chatid,
+                    };
+                    content = JsonContent.Create(createOrder);
 
-                        var request = await client.PostAsync("http://localhost:5550/api/Order/CreateOrder", content, cancellationToken);
+                    var request = await client.PostAsync("http://localhost:5550/api/Order/CreateOrder", content, cancellationToken);
 
-                        var response = JsonConvert.DeserializeObject<ExecResultModel>(await request.Content.ReadAsStringAsync());
-                        if (request.IsSuccessStatusCode)
-                        {
-                            var inlineMarkup = new InlineKeyboardMarkup(
-                                new[]
-                                {
+                    var response = JsonConvert.DeserializeObject<ExecResultModel>(await request.Content.ReadAsStringAsync());
+                    if (request.IsSuccessStatusCode)
+                    {
+                        var inlineMarkup = new InlineKeyboardMarkup(
+                            new[]
+                            {
                                     InlineKeyboardButton.WithCallbackData("К заказам", "/main")
-                                });
+                            });
 
-                            await Client.EditMessageTextAsync(
-                                chatId: chatid,
-                                text: response.Message,
-                                messageId: messageid,
-                                replyMarkup: inlineMarkup,
-                                cancellationToken: cancellationToken);
-                        }
+                        await Client.EditMessageTextAsync(
+                            chatId: chatid,
+                            text: response.Message,
+                            messageId: messageid,
+                            replyMarkup: inlineMarkup,
+                            cancellationToken: cancellationToken);
                     }
+
                 }
                 else if (orderList != null && orderList.Count() == 4)
                 {

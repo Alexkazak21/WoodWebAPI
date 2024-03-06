@@ -1,23 +1,26 @@
 ﻿using Newtonsoft.Json;
 using Telegram.Bot;
+using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
+using WoodWebAPI.Data;
 using WoodWebAPI.Data.Models.Customer;
 
-namespace WoodWebAPI.Worker.Controller.Commands;
+namespace WoodWebAPI.Worker.Commands;
 
-public class AdminManageCommand(IWorkerCreds workerCreds) : ICommand
+public class AdminManageCommand(IWorkerCreds workerCreds,WoodDBContext wood) : ICommand
 {
     private readonly IWorkerCreds _workerCreds = workerCreds;
+    private readonly WoodDBContext _dbContext = wood;
     public TelegramBotClient Client => TelegramWorker.API;
 
     public string Name => "/admin_manage";
 
     public async Task Execute(Update update, CancellationToken cancellationToken)
     {
-        if (cancellationToken.IsCancellationRequested) return;
+        if (cancellationToken.IsCancellationRequested || update == null) return;
 
-        if (update != null)
+        try
         {
             var chatId = 0l;
             var messageId = 0;
@@ -47,7 +50,7 @@ public class AdminManageCommand(IWorkerCreds workerCreds) : ICommand
                                 {
                                     new[]
                                     {
-                                        InlineKeyboardButton.WithCallbackData("Добавить",$"/reg_admin:{availableToAddAdmins[0].TelegramId}"),
+                                        InlineKeyboardButton.WithCallbackData("Добавить",$"/change_role:{availableToAddAdmins[0].TelegramId}:Admin"),
                                     },
                                     new[]
                                     {
@@ -73,11 +76,11 @@ public class AdminManageCommand(IWorkerCreds workerCreds) : ICommand
                                    [
                                        InlineKeyboardButton.WithCallbackData("На главную","/main")
                                     ]),
-                                  
+
                                 cancellationToken: cancellationToken);
                         }
                     }
-                    else if ( commandParts[2] != null )
+                    else if (commandParts[2] != null)
                     {
 
                     }
@@ -97,7 +100,7 @@ public class AdminManageCommand(IWorkerCreds workerCreds) : ICommand
                                 {
                                     new[]
                                     {
-                                        InlineKeyboardButton.WithCallbackData("Удалить",$"/del_admin:{availableToDeleteAdmins[0].TelegramId}"),
+                                        InlineKeyboardButton.WithCallbackData("Удалить",$"/change_role:{availableToDeleteAdmins[0].TelegramId}:User"),
                                     },
                                     new[]
                                     {
@@ -144,7 +147,7 @@ public class AdminManageCommand(IWorkerCreds workerCreds) : ICommand
             }
             else
             {
-                var mainAdmin = TelegramWorker.AdminList.FirstOrDefault(x => x.Id == 0);
+                var mainAdmin = _dbContext.IsAdmin.FirstOrDefault(x => x.Id == 1);
                 var replyMarkup = new InlineKeyboardMarkup(
                     new[]
                     {
@@ -171,6 +174,14 @@ public class AdminManageCommand(IWorkerCreds workerCreds) : ICommand
                     cancellationToken: cancellationToken);
             }
         }
+        catch (ApiRequestException)
+        {
+            TelegramWorker.Logger.LogError("Ошибка обновления телеграм");
+        }
+        catch (Exception)
+        {
+            TelegramWorker.Logger.LogError("Ошибка in AdminManageCommand");
+        }
     }
 
     private async Task<List<GetCustomerAdmin>> GetAvailableCustomers(bool availableCustomer = false)
@@ -189,21 +200,21 @@ public class AdminManageCommand(IWorkerCreds workerCreds) : ICommand
         {
             foreach (var customer in responce)
             {
-                if (availableCustomer) 
+                if (availableCustomer)
                 {
-                    if (TelegramWorker.AdminList.FirstOrDefault(x => x.TelegramId == customer.TelegramId.ToString()) == null)
+                    if (_dbContext.IsAdmin.FirstOrDefault(x => x.TelegramId == customer.TelegramId.ToString()) == null)
                     {
-                        availableCustomersToAdmin.Add(customer);
+                        availableCustomersToAdmin.Add(customer);                        
                     }
                 }
                 else
                 {
-                    if (TelegramWorker.AdminList.FirstOrDefault(x => x.TelegramId == customer.TelegramId.ToString() && x.Id > 0) != null)
+                    if (_dbContext.IsAdmin.FirstOrDefault(x => x.TelegramId == customer.TelegramId.ToString() && x.Id > 1) != null)
                     {
-                        availableCustomersToAdmin.Add(customer);
+                        availableCustomersToAdmin.Add(customer);                        
                     }
                 }
-                
+
             }
         }
 

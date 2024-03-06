@@ -6,7 +6,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Order;
 
-namespace WoodWebAPI.Worker.Controller.Commands;
+namespace WoodWebAPI.Worker.Commands;
 
 public class DeleteOrderCommand(IWorkerCreds workerCreds) : ICommand
 {
@@ -50,63 +50,63 @@ public class DeleteOrderCommand(IWorkerCreds workerCreds) : ICommand
 
                 if (userExist && chatid != -1 && orderId > 0)
                 {
-                    using (HttpClient httpClient = new HttpClient())
+                    using HttpClient httpClient = new HttpClient();
+
+                    var content = JsonContent.Create(
+                        new ArchiveOrderDTO()
+                        {
+                            CustomerTelegramId = chatid,
+                            OrderId = orderId,
+                        });
+
+                    var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/DeleteOrder", content, cancellationToken);
+
+                    var response = await request.Content.ReadAsStringAsync(cancellationToken);
+
+                    var result = JsonConvert.DeserializeObject<ExecResultModel>(response);
+
+                    if (result != null && result.Success)
                     {
-                        var content = JsonContent.Create(
-                            new ArchiveOrderDTO()
-                            {
-                                CustomerTelegramId = chatid,
-                                OrderId = orderId,
-                            });
-
-                        var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/DeleteOrder", content, cancellationToken);
-                        
-                        var response = await request.Content.ReadAsStringAsync(cancellationToken);
-
-                        var result = JsonConvert.DeserializeObject<ExecResultModel>(response);
-
-                        if(result != null && result.Success)
-                        {
-                            await Client.EditMessageTextAsync(
-                            chatId: chatid,
-                            text: $"{result.Message}",
-                            messageId: update.CallbackQuery.Message.MessageId,
-                            replyMarkup: new InlineKeyboardMarkup(
-                                                    new[]
-                                                    {
+                        await Client.EditMessageTextAsync(
+                        chatId: chatid,
+                        text: $"{result.Message}",
+                        messageId: update.CallbackQuery.Message.MessageId,
+                        replyMarkup: new InlineKeyboardMarkup(
+                                                new[]
+                                                {
                                                     InlineKeyboardButton.WithCallbackData("К заказам","/main"),
-                                                    })
-                            );
-                        }
-                        else if(result != null && !result.Success)
-                        {
-                            await Client.EditMessageTextAsync(
-                                chatId: chatid,
-                                text: $"{response}",
-                                messageId: update.CallbackQuery.Message.MessageId,
-                                replyMarkup: new InlineKeyboardMarkup(
-                                                        new[]
-                                                        {
-                                                    InlineKeyboardButton.WithCallbackData("К заказам","/main"),
-                                                        })
-                                );
-                        }
-                        else 
-                        {
-                            await Client.EditMessageTextAsync(
-                            chatId: chatid,
-                            text: $"Произохла непредвиденная ошибка, попытайтесь снова",
-                            messageId: update.CallbackQuery.Message.MessageId,
-                            replyMarkup: new InlineKeyboardMarkup(
-                                                    new[]
-                                                    {
-                                                    InlineKeyboardButton.WithCallbackData("К заказам","/main"),
-                                                    })
-                            );
-                        }
+                                                })
+                        );
                     }
+                    else if (result != null && !result.Success)
+                    {
+                        await Client.EditMessageTextAsync(
+                            chatId: chatid,
+                            text: $"{response}",
+                            messageId: update.CallbackQuery.Message.MessageId,
+                            replyMarkup: new InlineKeyboardMarkup(
+                                                    new[]
+                                                    {
+                                                    InlineKeyboardButton.WithCallbackData("К заказам","/main"),
+                                                    })
+                            );
+                    }
+                    else
+                    {
+                        await Client.EditMessageTextAsync(
+                        chatId: chatid,
+                        text: $"Произохла непредвиденная ошибка, попытайтесь снова",
+                        messageId: update.CallbackQuery.Message.MessageId,
+                        replyMarkup: new InlineKeyboardMarkup(
+                                                new[]
+                                                {
+                                                    InlineKeyboardButton.WithCallbackData("К заказам","/main"),
+                                                })
+                        );
+                    }
+
                 }
-                else if (orderId <= 0 )
+                else if (orderId <= 0)
                 {
                     var orders = await new CommonChecks(_workerCreds).CheckOrdersOfCustomer(chatid, cancellationToken);
 
@@ -124,7 +124,7 @@ public class DeleteOrderCommand(IWorkerCreds workerCreds) : ICommand
 
                         keyboard = new InlineKeyboardMarkup(new[]
                         {
-                            keybordButtons.ToArray<InlineKeyboardButton>()                                
+                            keybordButtons.ToArray<InlineKeyboardButton>()
                         });
 
                         await Client.EditMessageTextAsync(

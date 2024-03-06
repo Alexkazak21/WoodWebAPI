@@ -10,8 +10,8 @@ public static class OrderExtensions
         return order.Status switch
         {
             OrderStatus.NewOrder => newStatus == OrderStatus.Approved || newStatus == OrderStatus.Archived,
-            OrderStatus.Approved => newStatus == OrderStatus.Verivied  || newStatus == OrderStatus.CanceledByAdmin,
-            OrderStatus.Verivied => newStatus == OrderStatus.Completed || newStatus == OrderStatus.CanceledByAdmin,
+            OrderStatus.Approved => newStatus == OrderStatus.Verified  || newStatus == OrderStatus.CanceledByAdmin,
+            OrderStatus.Verified => newStatus == OrderStatus.Completed || newStatus == OrderStatus.CanceledByAdmin,
             OrderStatus.CanceledByAdmin => newStatus == OrderStatus.Archived,
             OrderStatus.Completed => newStatus == OrderStatus.Paid,
             OrderStatus.Paid => newStatus == OrderStatus.Archived,
@@ -27,7 +27,7 @@ public static class OrderExtensions
         {
             OrderStatus.NewOrder => "Новый заказ, не подтверждён администратором",
             OrderStatus.Approved => "Подтверждён",
-            OrderStatus.Verivied => "Принят в работу",
+            OrderStatus.Verified => "Принят в работу",
             OrderStatus.Completed => "Завершён, ожидает оплату",
             OrderStatus.Archived => "В архиве",
             _ => "На рассмотрении Администратора"

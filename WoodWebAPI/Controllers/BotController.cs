@@ -1,18 +1,18 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using WoodWebAPI.Data;
 using WoodWebAPI.Worker;
-using WoodWebAPI.Worker.Controller.Commands;
 
 namespace WoodWebAPI.Controllers
 {
     [Route("/")]
     [ApiController]
-    public class BotController(ILogger<BotController> logger, IWorkerCreds workerCreds) : ControllerBase
+    public class BotController(ILogger<BotController> logger, IWorkerCreds workerCreds, WoodDBContext wood) : ControllerBase
     {
         private readonly TelegramBotClient _bot = TelegramWorker.API;
         private readonly ILogger<BotController>? _logger = logger;
-        private readonly UpdateDistributor _distributor = new(workerCreds);
+        private readonly UpdateDistributor _distributor = new(workerCreds,wood);
 
         [HttpPost]
         public async void Post(Update update, CancellationToken cancellationToken)

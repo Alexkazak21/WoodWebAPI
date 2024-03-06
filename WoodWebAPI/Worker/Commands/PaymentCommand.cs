@@ -4,11 +4,11 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.Payments;
+using WoodWebAPI.Data.Entities;
 using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Order;
-using WoodWebAPI.Data.Entities;
 
-namespace WoodWebAPI.Worker.Controller.Commands;
+namespace WoodWebAPI.Worker.Commands;
 
 public class PaymentCommand(IWorkerCreds workerCreds) : ICommand
 {
@@ -72,43 +72,42 @@ public class PaymentCommand(IWorkerCreds workerCreds) : ICommand
 
                 if (orders.Where(x => x.Id == orderId && x.Status == OrderStatus.Completed).First() != null)
                 {
+                    using HttpClient httpClient = new();
 
-                    using (HttpClient httpClient = new HttpClient())
+                    var content = JsonContent.Create(
+                        new ChangeStatusDTO()
+                        {
+                            OrderId = orderId,
+                            NewStatus = OrderStatus.Paid
+                        });
+
+                    var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/ChangeStatusOfOrder", content);
+                    var responce = JsonConvert.DeserializeObject<ExecResultModel>(await request.Content.ReadAsStringAsync());
+                    if (!responce.Success)
                     {
-                        var content = JsonContent.Create(
-                            new ChangeStatusDTO()
-                            {
-                                OrderId = orderId,
-                                NewStatus = OrderStatus.Paid
-                            });
-
-                        var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/ChangeStatusOfOrder", content);
-                        var responce = JsonConvert.DeserializeObject<ExecResultModel>(await request.Content.ReadAsStringAsync());
-                        if (!responce.Success)
-                        {
-                            TelegramWorker.Logger.LogError("Не удалось сохранить оплату по причине\n" + responce.Message);
-                            return;
-                        }
-
-                        content = JsonContent.Create(
-                            new ChangeStatusDTO()
-                            {
-                                OrderId = orderId,
-                                NewStatus = OrderStatus.Archived
-                            });
-
-                        request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/ChangeStatusOfOrder", content);
-                        responce = JsonConvert.DeserializeObject<ExecResultModel>(await request.Content.ReadAsStringAsync());
-                        if (responce.Success)
-                        {
-                            TelegramWorker.Logger.LogError($"Заказ с № {orderId} помещён в архив");
-                        }
-                        else
-                        {
-                            TelegramWorker.Logger.LogError($"Не удалось поместить в архив заказ с № {orderId}\n" + responce.Message);
-                            return;
-                        }
+                        TelegramWorker.Logger.LogError("Не удалось сохранить оплату по причине\n" + responce.Message);
+                        return;
                     }
+
+                    content = JsonContent.Create(
+                        new ChangeStatusDTO()
+                        {
+                            OrderId = orderId,
+                            NewStatus = OrderStatus.Archived
+                        });
+
+                    request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/ChangeStatusOfOrder", content);
+                    responce = JsonConvert.DeserializeObject<ExecResultModel>(await request.Content.ReadAsStringAsync());
+                    if (responce.Success)
+                    {
+                        TelegramWorker.Logger.LogError($"Заказ с № {orderId} помещён в архив");
+                    }
+                    else
+                    {
+                        TelegramWorker.Logger.LogError($"Не удалось поместить в архив заказ с № {orderId}\n" + responce.Message);
+                        return;
+                    }
+
 
                     var configuration = new ConfigurationBuilder()
                     .AddJsonFile("appsettings.json", false)
@@ -118,7 +117,7 @@ public class PaymentCommand(IWorkerCreds workerCreds) : ICommand
 
                     var pathToPaymentsLogFile = "./" + configuration.GetValue<string>("PaymentsLogFile");
                     StringBuilder stringBuilder = new StringBuilder();
-                    stringBuilder.AppendLine("\n========================================================================================");
+                    stringBuilder.AppendLine("\n==========================================================================================");
                     stringBuilder.AppendLine($"Поступила оплата от {update.Message.From.FirstName} с ID={update.Message.From.Id}");
                     stringBuilder.AppendLine($"Оплата в размере {(decimal)update.Message.SuccessfulPayment.TotalAmount / 100} BYN");
                     stringBuilder.AppendLine($"Платёжный идентификатор в Telegram: {update.Message.SuccessfulPayment.TelegramPaymentChargeId}");
@@ -135,9 +134,9 @@ public class PaymentCommand(IWorkerCreds workerCreds) : ICommand
         }
         catch
         {
-            
+
         }
 
-        
+
     }
 }

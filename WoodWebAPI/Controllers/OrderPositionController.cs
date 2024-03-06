@@ -25,7 +25,7 @@ namespace WoodWebAPI.Controllers
                 return Ok(data);
             }
 
-            return BadRequest(data);
+            return Ok(data);
         }
 
         [HttpPost]
@@ -38,7 +38,7 @@ namespace WoodWebAPI.Controllers
                 return Ok(data);
             }
 
-            return BadRequest(data);
+            return Ok(data);
         }
 
         [HttpPost]
@@ -59,7 +59,7 @@ namespace WoodWebAPI.Controllers
                 return Ok(data);
             }
 
-            return BadRequest(data);
+            return Ok(data);
         }
     }
 }

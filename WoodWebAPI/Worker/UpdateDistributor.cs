@@ -1,14 +1,16 @@
 ﻿using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using WoodWebAPI.Worker.Controller.Commands;
+using WoodWebAPI.Data;
+using WoodWebAPI.Worker.Commands;
 
 namespace WoodWebAPI.Worker
 {
-    public class UpdateDistributor(IWorkerCreds workerCreds) 
+    public class UpdateDistributor(IWorkerCreds workerCreds, WoodDBContext wood) 
     {
         private Dictionary<long, CommandExecutor> listeners = new();
         private readonly IWorkerCreds _creds = workerCreds;
+        private readonly WoodDBContext _dbContext = wood;
 
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
@@ -38,7 +40,7 @@ namespace WoodWebAPI.Worker
             var listener = listeners.GetValueOrDefault(chatId);
             if (listener is null)
             {
-                listener = new(_creds);
+                listener = new(_creds, _dbContext);
                 listeners.Add(chatId, listener);
                 await listener.HandleUpdateAsync(botClient, update, cancellationToken);
                 return;

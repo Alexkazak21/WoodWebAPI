@@ -69,7 +69,7 @@ public class OrderPositionManageService : IOrderPositionManage
                 .OrderBy(x => x.LengthInMeter)
                 .ThenBy(x => x.DiameterInСantimeter)
                 .ThenBy(x => x.VolumeInMeter3)
-                .FirstAsync();
+                .FirstOrDefaultAsync() ?? throw new ArgumentNullException();
 
             // сохранение данных о добавленном дереве  и изменившемся заказе в базу
 
@@ -97,7 +97,7 @@ public class OrderPositionManageService : IOrderPositionManage
                 Success = false,
                 Message = "Что-то пошло не так, проверьте правильность введённых данных и попробуйте снова\n" +
                 $"Длинна в диапазоне от {minLength:0.00}м до {maxLength:0.00}м\n" +
-                $"Диаметр в дмапазоне от {(int)minDiameter}см до {(int)maxDiameter}см"
+                $"Диаметр в диапазоне от {(int)minDiameter}см до {(int)maxDiameter}см"
             };
         }
         catch (DbUpdateException)

@@ -20,7 +20,7 @@ public enum OrderStatus
 {
     NewOrder,
     Approved,
-    Verivied,
+    Verified,
     CanceledByAdmin,
     Completed,
     Paid,

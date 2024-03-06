@@ -3,13 +3,15 @@ using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using WoodWebAPI.Data;
 using WoodWebAPI.Data.Entities;
 
-namespace WoodWebAPI.Worker.Controller.Commands;
+namespace WoodWebAPI.Worker.Commands;
 
-public class MainCommand(IWorkerCreds workerCreds) : ICommand
+public class MainCommand(IWorkerCreds workerCreds, WoodDBContext wood) : ICommand
 {
     private readonly IWorkerCreds _workerCreds = workerCreds;
+    private readonly WoodDBContext _dbContext = wood;
     public TelegramBotClient Client => TelegramWorker.API;
 
     public string Name => "/main";
@@ -39,7 +41,7 @@ public class MainCommand(IWorkerCreds workerCreds) : ICommand
 
                 messageId = update.Message.MessageId;
 
-                if (TelegramWorker.AdminList.Find(x => x.TelegramId == chatid.ToString() && x.AdminRole == 1) != null) { isAdmin = true; }
+                if (_dbContext.IsAdmin.FirstOrDefault(x => x.TelegramId == chatid.ToString() && x.AdminRole == 1) != null) { isAdmin = true; }
 
                 userExist = await new CommonChecks(_workerCreds).CheckCustomer(chatid, cancellationToken);
             }
@@ -49,7 +51,7 @@ public class MainCommand(IWorkerCreds workerCreds) : ICommand
 
                 messageId = update.CallbackQuery.Message.MessageId;
 
-                if (TelegramWorker.AdminList.Find(x => x.TelegramId == chatid.ToString() && x.AdminRole == 1) != null) { isAdmin = true; }
+                if (_dbContext.IsAdmin.FirstOrDefault(x => x.TelegramId == chatid.ToString() && x.AdminRole == 1) != null) { isAdmin = true; }
 
                 userExist = await new CommonChecks(_workerCreds).CheckCustomer(chatid, cancellationToken);
 
@@ -61,7 +63,7 @@ public class MainCommand(IWorkerCreds workerCreds) : ICommand
                 }
             }
 
-            if ((userExist && chatid != -1 && !isAdmin) || continueAsUser)
+            if (userExist && chatid != -1 && !isAdmin || continueAsUser)
             {
                 var orders = await new CommonChecks(_workerCreds).CheckOrdersOfCustomer(chatid, cancellationToken);
 

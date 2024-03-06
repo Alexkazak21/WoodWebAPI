@@ -2,28 +2,29 @@
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
+using WoodWebAPI.Data;
 
-namespace WoodWebAPI.Worker.Controller.Commands;
+namespace WoodWebAPI.Worker.Commands;
 
 
-public class CommandExecutor(IWorkerCreds workerCreds) : IUpdateHandler
+public class CommandExecutor(IWorkerCreds workerCreds, WoodDBContext wood) : IUpdateHandler
 {
     private List<ICommand> commands =
         [
             new StartCommand(workerCreds),
             new CancelCommand(),
             new SignUpCommand(workerCreds),
-            new LoginCommand(workerCreds),
-            new MainCommand(workerCreds),
+            new LoginCommand(workerCreds, wood),
+            new MainCommand(workerCreds, wood),
             new NewOrderCommand(workerCreds),
             new DeleteOrderCommand(workerCreds),
             new ShowOrderCommand(workerCreds),
             new AddOrderPositionCommand(workerCreds),
             new ClearCommand(),
             new AlterOrderPositionCommand(workerCreds),
-            new RegAdminCommand(workerCreds),
-            new OrderManageCommand(workerCreds),
-            new AdminManageCommand(workerCreds),
+            new ChangeAdminRoleCommand(workerCreds),
+            new OrderManageCommand(workerCreds,wood),
+            new AdminManageCommand(workerCreds, wood),
             new PaymentCommand(workerCreds),
         ];
     public async Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
@@ -33,7 +34,7 @@ public class CommandExecutor(IWorkerCreds workerCreds) : IUpdateHandler
 
     public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
-        if(update.Message != null && update.CallbackQuery == null) // ожидается получнение только сообщения
+        if (update.Message != null && update.CallbackQuery == null) // ожидается получнение только сообщения
         {
             Message msg = update.Message;
             if (msg.Text == null) //такое бывает, во избежании ошибок делаем проверку
@@ -75,7 +76,7 @@ public class CommandExecutor(IWorkerCreds workerCreds) : IUpdateHandler
             }
         }
         else if (update.Message == null && update.CallbackQuery != null) // ожидаем на входе только нажатие на кнопку
-        { 
+        {
             CallbackQuery query = new CallbackQuery();
             query.Data = update.CallbackQuery.Data;
             if (query.Data == null) //такое бывает, во избежании ошибок делаем проверку
@@ -94,7 +95,7 @@ public class CommandExecutor(IWorkerCreds workerCreds) : IUpdateHandler
                 }
             }
         }
-        else if(update.Type == Telegram.Bot.Types.Enums.UpdateType.PreCheckoutQuery)
+        else if (update.Type == Telegram.Bot.Types.Enums.UpdateType.PreCheckoutQuery)
         {
             update.CallbackQuery = new CallbackQuery()
             {
@@ -119,6 +120,6 @@ public class CommandExecutor(IWorkerCreds workerCreds) : IUpdateHandler
     //    //    .Where(x => typeof(ICommand).IsAssignableFrom(x))
     //    //    .Select(x => x.FullName).ToList();
 
-        
+
     //}
 }

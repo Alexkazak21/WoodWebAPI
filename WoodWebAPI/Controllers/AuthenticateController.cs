@@ -1,11 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using WoodWebAPI.Auth;
+using WoodWebAPI.Data;
 
 namespace WoodWebAPI.Controllers
 {
@@ -16,17 +18,24 @@ namespace WoodWebAPI.Controllers
         private readonly UserManager<IdentityUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<AuthenticateController> _logger;
+        private readonly WoodDBContext _woodDb;
 
         public AuthenticateController(
             UserManager<IdentityUser> userManager,
             RoleManager<IdentityRole> roleManager,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ILogger<AuthenticateController> logger,
+            WoodDBContext wood)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _configuration = configuration;
+            _logger = logger;   
+            _woodDb = wood;
         }
 
+        [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
@@ -67,14 +76,24 @@ namespace WoodWebAPI.Controllers
             IdentityUser user = new()
             {
                 SecurityStamp = Guid.NewGuid().ToString(),
-                Id = model.TelegramID,
+                UserName = model.TelegramID,
             };
             var result = await _userManager.CreateAsync(user);
+
+            if (!await _roleManager.RoleExistsAsync(UserRoles.User))
+                await _roleManager.CreateAsync(new IdentityRole(UserRoles.User));
+
+            if (await _roleManager.RoleExistsAsync(UserRoles.User))
+            {
+                await _userManager.AddToRoleAsync(user, UserRoles.User);
+            }
+
             if (!result.Succeeded)
                 return StatusCode(StatusCodes.Status500InternalServerError, new Response { Status = "Error", Message = "User creation failed! Please check user details and try again." });
 
             return Ok(new Response { Status = "Success", Message = "Пользователь успешно создан!" });
         }
+
 
         [HttpPost]
         public async Task<IActionResult> RegisterAdmin([FromBody] RegisterModel model)
@@ -101,14 +120,14 @@ namespace WoodWebAPI.Controllers
             {
                 await _userManager.AddToRoleAsync(user, UserRoles.Admin);
             }
-            if (await _roleManager.RoleExistsAsync(UserRoles.Admin))
+            if (await _roleManager.RoleExistsAsync(UserRoles.User))
             {
                 await _userManager.AddToRoleAsync(user, UserRoles.User);
             }
             return Ok(new Response { Status = "Success", Message = "Пользователь успешно создан!" });
         }
 
-        [Authorize]
+        [Authorize(Roles = UserRoles.Admin)]
         [HttpPost]
         public async Task<IActionResult> ChangeRole([FromBody] ChangeRoleDTO model)
         {
@@ -127,12 +146,39 @@ namespace WoodWebAPI.Controllers
             if (!roles.Any(x => x == "Admin") && model.NewRole == "Admin" && await _roleManager.RoleExistsAsync(UserRoles.Admin))
             {
                 await _userManager.AddToRoleAsync(userExists, UserRoles.Admin);
+                await _userManager.RemoveFromRoleAsync(userExists, UserRoles.User);
+                var customer = await _woodDb.IsAdmin.Where(x => x.TelegramId == model.TelegramId).FirstOrDefaultAsync();
+                if(customer == null)
+                {
+                    var x = new Data.Entities.IsAdmin
+                    {
+                        AdminRole = 1,
+                        CreatedAt = DateTime.UtcNow,
+                        TelegramId = model.TelegramId,
+                        TelegramUsername = (await _woodDb.Customers.Where(x => x.TelegramID == long.Parse(model.TelegramId)).FirstAsync()).Username,
+                    };
+                    await _woodDb.IsAdmin.AddAsync(x);
+                }
+                else
+                {
+                    customer.AdminRole = 1;
+                }               
+
+                await _woodDb.SaveChangesAsync();
                 return Ok(new Response { Status = "Success", Message = "Роль Пользователя успешно обнавлена!" });
             }
 
             if (roles.Any(x => x == "Admin") && model.NewRole == "User" && await _roleManager.RoleExistsAsync(UserRoles.Admin))
             {
                 await _userManager.RemoveFromRoleAsync(userExists, UserRoles.Admin);
+                await _userManager.AddToRoleAsync(userExists,UserRoles.User);
+                var customer = await _woodDb.IsAdmin.Where(x => x.TelegramId == model.TelegramId).FirstOrDefaultAsync();
+                if(customer != null) 
+                {
+                    _woodDb.IsAdmin.Remove(customer);
+                }
+                
+                await _woodDb.SaveChangesAsync();
                 return Ok(new Response { Status = "Success", Message = "Роль Пользователя успешно обнавлена!" });
             }
 

@@ -1,18 +1,22 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using System.Linq;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
+using WoodWebAPI.Data;
 using WoodWebAPI.Data.Entities;
 using WoodWebAPI.Data.Models;
 using WoodWebAPI.Data.Models.Customer;
 using WoodWebAPI.Data.Models.Order;
 using WoodWebAPI.Services.Extensions;
 
-namespace WoodWebAPI.Worker.Controller.Commands;
+namespace WoodWebAPI.Worker.Commands;
 
-public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
+public class OrderManageCommand(IWorkerCreds workerCreds, WoodDBContext wood) : ICommand
 {
+    private readonly WoodDBContext _dbContext = wood;
     private readonly IWorkerCreds _workerCreds = workerCreds;
     public TelegramBotClient Client => TelegramWorker.API;
 
@@ -93,7 +97,24 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
             }
             else if (commandParts.Length > 2 && commandParts[1] == "verify")
             {
-                var result = await ChangeOrderStatusAsync(int.Parse(commandParts[2]), OrderStatus.Verivied);
+                var result = await ChangeOrderStatusAsync(int.Parse(commandParts[2]), OrderStatus.Verified);
+
+                await Client.EditMessageTextAsync(
+                   chatId: chatId,
+                   messageId: messageid,
+                   text: $"{result.Message}",
+                   replyMarkup: new InlineKeyboardMarkup(
+                       new[]
+                       {
+                               InlineKeyboardButton.WithCallbackData("Назад","/order_manage"),
+                       }
+                       ),
+                   cancellationToken: cancellationToken
+               );
+            }
+            else if(commandParts.Length > 2 && commandParts[1] == "approve")
+            {
+                var result = await ChangeOrderStatusAsync(int.Parse(commandParts[2]), OrderStatus.Approved);
 
                 await Client.EditMessageTextAsync(
                    chatId: chatId,
@@ -168,47 +189,49 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
                 NewStatus = newStatus
             });
             ExecResultModel? completeResult = null;
-            using (HttpClient httpClient = new HttpClient())
+            using HttpClient httpClient = new();
+
             {
                 var request = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/ChangeStatusOfOrder", content);
                 var responce = await request.Content.ReadAsStringAsync();
                 completeResult = JsonConvert.DeserializeObject<ExecResultModel>(responce);
             }
 
+
+
             if (completeResult.Success && newStatus == OrderStatus.Completed)
             {
-                using (HttpClient httpClient = new HttpClient())
+                var responce = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Customer/GetCustomers", new StringContent(""));
+                var responseJsonContent = await responce.Content.ReadAsStringAsync();
+                GetCustomerModel[] customersArray = JsonConvert.DeserializeObject<GetCustomerModel[]>(responseJsonContent);
+
+                foreach (var customer in customersArray)
                 {
-                    var responce = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Customer/GetCustomers", new StringContent(""));
-                    var responseJsonContent = await responce.Content.ReadAsStringAsync();
-                    GetCustomerModel[] customersArray = JsonConvert.DeserializeObject<GetCustomerModel[]>(responseJsonContent);
-
-                    foreach (var customer in customersArray)
+                    if (customer.Orders.FirstOrDefault(x => x.Id == orderId) != null)
                     {
-                        if (customer.Orders.FirstOrDefault(x => x.Id == orderId) != null)
-                        {
-                            var volume = await new CommonChecks(_workerCreds).GetVolume(customer.TelegramId, orderId);
+                        var volume = await new CommonChecks(_workerCreds).GetVolume(customer.TelegramId, orderId);
 
-                            var ammountToPay = decimal.Round(_workerCreds.PriceForM3 * decimal.Parse(volume.ToString()), 2, MidpointRounding.AwayFromZero) > _workerCreds.MinPrice ?
-                                                decimal.Round(_workerCreds.PriceForM3 * decimal.Parse(volume.ToString()), 2, MidpointRounding.AwayFromZero) : _workerCreds.MinPrice;
-                            await Client.SendTextMessageAsync(
-                            chatId: customer.TelegramId,
-                            text: $"{completeResult.Message}\n" +
-                            $"Произведите оплату в размере {ammountToPay} бел. рублей",
-                            replyMarkup: new InlineKeyboardMarkup(
-                            new[]
-                            {
+                        var ammountToPay = decimal.Round(_workerCreds.PriceForM3 * decimal.Parse(volume.ToString()), 2, MidpointRounding.AwayFromZero) > _workerCreds.MinPrice ?
+                                            decimal.Round(_workerCreds.PriceForM3 * decimal.Parse(volume.ToString()), 2, MidpointRounding.AwayFromZero) : _workerCreds.MinPrice;
+                        await Client.SendTextMessageAsync(
+                        chatId: customer.TelegramId,
+                        text: $"{completeResult.Message}\n" +
+                        $"Произведите оплату в размере {ammountToPay} бел. рублей",
+                        replyMarkup: new InlineKeyboardMarkup(
+                        new[]
+                        {
                                 new[]
                                 {
                                     InlineKeyboardButton.WithCallbackData("Перейти к оплате", $"/payment:{customer.TelegramId}:{ammountToPay}:{orderId}"),
                                 }
-                            })
-                            );
-                        }
+                        })
+                        );
                     }
                 }
-                var customers = completeResult;
             }
+            var customers = completeResult;
+
+
             return completeResult;
         }
         catch (Exception)
@@ -226,61 +249,68 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
         if (cancellationToken.IsCancellationRequested || update == null) return;
 
 
-        var customerId = -1l;
-
-        var messageId = update.CallbackQuery.Message.MessageId;
-
-        bool CustomerIsAdmin = false;
-
-        List<OrderModel>? orders = null;
-
-        if (update.Type == Telegram.Bot.Types.Enums.UpdateType.Message)
+        try
         {
-            customerId = update.Message.From.Id;
-            CustomerIsAdmin = await new CommonChecks(_workerCreds).CheckCustomer(customerId, cancellationToken);
-        }
-        else if (update.Type == Telegram.Bot.Types.Enums.UpdateType.CallbackQuery)
-        {
-            customerId = update.CallbackQuery.From.Id;
-            CustomerIsAdmin = true;
-        }
+            var customerId = -1l;
 
-        var chatId = customerId;
+            var messageId = update.CallbackQuery.Message.MessageId;
 
-        if (CustomerIsAdmin)
-        {
-            var customersList = new List<GetCustomerModel>();
-        }
+            bool CustomerIsAdmin = false;
 
-        using (HttpClient httpClient = new HttpClient())
-        {
+            List<OrderModel>? orders = null;
+
+            if (update.Type == Telegram.Bot.Types.Enums.UpdateType.Message)
+            {
+                customerId = update.Message.From.Id;
+                CustomerIsAdmin = await new CommonChecks(_workerCreds).CheckCustomer(customerId, cancellationToken);
+            }
+            else if (update.Type == Telegram.Bot.Types.Enums.UpdateType.CallbackQuery)
+            {
+                customerId = update.CallbackQuery.From.Id;
+                CustomerIsAdmin = true;
+            }
+
+            var chatId = customerId;
+
+            if (CustomerIsAdmin)
+            {
+                var customersList = new List<GetCustomerModel>();
+            }
+
+            using HttpClient httpClient = new();
+
             var content = new StringContent("");
 
             var responce = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Order/GetFullOrdersList", content, cancellationToken);
             var responseJsonContent = await responce.Content.ReadAsStringAsync(cancellationToken);
             orders = [.. JsonConvert.DeserializeObject<OrderModel[]?>(responseJsonContent)];
-        }
 
-        if (verified == true)
-        {
-            orders = orders.Where(x => x.Status == OrderStatus.Verivied).ToList();
-            await SendTemplateAsync(orders, chatId, messageId, verified: true, orderId: orderId, cancellationToken: cancellationToken);
+
+            if (verified == true)
+            {
+                orders = orders.Where(x => x.Status == OrderStatus.Verified).ToList();
+                await SendTemplateAsync(orders, chatId, messageId, verified: true, orderId: orderId, cancellationToken: cancellationToken);
+            }
+            else if (verified == false)
+            {
+                orders = orders.Where(x => x.Status < OrderStatus.Verified).ToList();
+                await SendTemplateAsync(orders, chatId, messageId, verified: false, orderId: orderId, cancellationToken: cancellationToken);
+            }
+            else
+            {
+                await SendTemplateAsync(orders, chatId, messageId, orderId: orderId, cancellationToken: cancellationToken);
+            }
         }
-        else if (verified == false)
+        catch (Exception)
         {
-            orders = orders.Where(x => x.Status == OrderStatus.NewOrder).ToList();
-            await SendTemplateAsync(orders, chatId, messageId, verified: false, orderId: orderId, cancellationToken: cancellationToken);
-        }
-        else
-        {
-            await SendTemplateAsync(orders, chatId, messageId, orderId: orderId, cancellationToken: cancellationToken);
-        }
+            TelegramWorker.Logger.LogError("Ошибка в ShowAllOrders");
+        }        
     }
 
 
 
     private async Task SendTemplateAsync(List<OrderModel>? orders, long chatId, int messageId, bool? verified = null, int? orderId = null, CancellationToken cancellationToken = default)
-    { 
+    {
         try
         {
             // список заказов пуст
@@ -319,16 +349,20 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
             if (orders != null && orderId == null)
             {
                 orderId = orders[0].Id;
-
-                if (orders.First(x => x.Id == orderId).Status < OrderStatus.Verivied)
+                
+                if(orders.First(x => x.Id == orderId).Status == OrderStatus.NewOrder)
                 {
-                    proccessButton = InlineKeyboardButton.WithCallbackData("Приять в работу", $"/order_manage:verify:{orderId}");
+                    proccessButton = InlineKeyboardButton.WithCallbackData("Подтвердить", $"/order_manage:approve:{orderId}");
                 }
-                else if (orders.First(x => x.Id == orderId).Status == OrderStatus.Verivied)
+                else if (orders.First(x => x.Id == orderId).Status < OrderStatus.Verified)
+                {
+                    proccessButton = InlineKeyboardButton.WithCallbackData("Принять в работу", $"/order_manage:verify:{orderId}");
+                }
+                else if (orders.First(x => x.Id == orderId).Status == OrderStatus.Verified)
                 {
                     proccessButton = InlineKeyboardButton.WithCallbackData("Завершить заказ", $"/order_manage:complete:{orderId}");
                 }
-                else if(orders.First(x => x.Id == orderId).Status == OrderStatus.Completed)
+                else if (orders.First(x => x.Id == orderId).Status == OrderStatus.Completed)
                 {
                     var volume = await new CommonChecks(_workerCreds).GetVolume(orders[0].CustomerId, orders[0].Id);
 
@@ -338,16 +372,20 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
                 }
                 else
                 {
-                    proccessButton = InlineKeyboardButton.WithCallbackData("В архиве","skip");
-                }                      
+                    proccessButton = InlineKeyboardButton.WithCallbackData("В архиве", "skip");
+                }
             }
             else
             {
-                if (orders.First(x => x.Id == orderId).Status < OrderStatus.Verivied)
+                if (orders.First(x => x.Id == orderId).Status == OrderStatus.NewOrder)
                 {
-                    proccessButton = InlineKeyboardButton.WithCallbackData("Приять в работу", $"/order_manage:verify:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}");
+                    proccessButton = InlineKeyboardButton.WithCallbackData("Подтвердить", $"/order_manage:approve:{orderId}");
                 }
-                else if (orders.First(x => x.Id == orderId).Status == OrderStatus.Verivied)
+                else if (orders.First(x => x.Id == orderId).Status < OrderStatus.Verified)
+                {
+                    proccessButton = InlineKeyboardButton.WithCallbackData("Принять в работу", $"/order_manage:verify:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}");
+                }
+                else if (orders.First(x => x.Id == orderId).Status == OrderStatus.Verified)
                 {
                     proccessButton = InlineKeyboardButton.WithCallbackData("Завершить заказ", $"/order_manage:complete:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}");
                 }
@@ -367,21 +405,24 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
             string orderStatusMessage = orders.First(x => x.Id == orderId).OrderStatusMessage();
 
             // отображение целого списк заказов без навигации, со статусом меньше Verified
-            if (orders != null && orderId == null && (verified == false || verified == null))
+            if (orders != null && orderId == orders[0].Id && (verified == false || verified == null || verified == true))
             {
                 var volumeTotal = await new CommonChecks(_workerCreds).GetVolume(orders.Where(x => x.Id == orders[0].Id).Select(x => x.CustomerId).First(), orders[0].Id);
                 if (orders.Count == 1)
                 {
+                    var customerId = orders.Where(x => x.Id == orderId).First().CustomerId;
+                    var userName = _dbContext.Customers.Where(x => x.TelegramID == customerId).First().Name;
                     await Client.EditMessageTextAsync(
                         chatId: chatId,
                         messageId: messageId,
                         text: $"Заказ № {orders[0].Id}\n" +
-                        $"Создан {orders[0].CreatedAt}\n" +
-                        $"Объёмом: {volumeTotal} m3\n" +
+                        $"Пользователь: {_dbContext.Customers.Where(x => x.TelegramID == orders[0].CustomerId).First().Name}\n" +
+                        $"Создан {orders[0].CreatedAt.AddHours(3)}\n" +
+                        $"Объёмом: {volumeTotal} м3\n" +
                         $"{orderStatusMessage}",
                         replyMarkup: new InlineKeyboardMarkup(
                             new[]
-                            {                                
+                            {
                                     new[]
                                     {
                                         proccessButton,
@@ -401,15 +442,16 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
                         chatId: chatId,
                         messageId: messageId,
                         text: $"Заказ № {orders[0].Id}\n" +
-                        $"Создан {orders[0].CreatedAt}\n" +
-                        $"Объёмом: {volumeTotal} m3\n" +
+                        $"Пользователь: {_dbContext.Customers.Where(x => x.TelegramID == orders[0].CustomerId).First().Name}\n" +
+                        $"Создан {orders[0].CreatedAt.AddHours(3)}\n" +
+                        $"Объёмом: {volumeTotal} м3\n" +
                         $"{orderStatusMessage}",
                         replyMarkup: new InlineKeyboardMarkup(
                            new[]
                            {
                                new[]
                                {
-                                   InlineKeyboardButton.WithCallbackData(">", $"/order_manage:all:{orders[1].Id}"),
+                                   InlineKeyboardButton.WithCallbackData(">", $"/order_manage:{(verified == null ? "all" : $"{verified.ToString().ToLower()}")}:{orders[1].Id}"),
                                },
                                new[]
                                {
@@ -432,6 +474,8 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
             {
                 var volumeTotal = await new CommonChecks(_workerCreds).GetVolume(orders.Where(x => x.Id == orderId).Select(x => x.CustomerId).First(), (int)orderId);
                 InlineKeyboardMarkup replyMarkup = null;
+                var customerId = orders.Where(x => x.Id == orderId).First().CustomerId;
+                var userName = _dbContext.Customers.Where(x => x.TelegramID == customerId).First().Name; 
 
                 if (orders[0].Id == orderId)
                 {
@@ -440,7 +484,7 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
                            {
                                new[]
                                {
-                                    InlineKeyboardButton.WithCallbackData(">", $"/order_manage:all:{orders[1].Id}"),
+                                    InlineKeyboardButton.WithCallbackData(">", $"/order_manage:{(verified == null ? "all" : $"{verified.ToString().ToLower()}")}:{orders[1].Id}"),
                                },
                                new[]
                                {
@@ -460,7 +504,7 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
                            {
                                new[]
                                {
-                                    InlineKeyboardButton.WithCallbackData("<", $"/order_manage:all:{orders[^2].Id}"),
+                                    InlineKeyboardButton.WithCallbackData("<", $"/order_manage:{(verified == null ? "all" : $"{verified.ToString().ToLower()}")}:{orders[^2].Id}"),
                                },
                                new[]
                                {
@@ -480,8 +524,8 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
                            {
                                new[]
                                {
-                                   InlineKeyboardButton.WithCallbackData("<", $"/order_manage:all:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First()) - 1].Id}"),
-                                   InlineKeyboardButton.WithCallbackData(">", $"/order_manage:all:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First()) + 1].Id}"),
+                                   InlineKeyboardButton.WithCallbackData("<", $"/order_manage:{(verified == null ? "all" : $"{verified.ToString().ToLower()}")}:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First()) - 1].Id}"),
+                                   InlineKeyboardButton.WithCallbackData(">", $"/order_manage:{(verified == null ? "all" : $"{verified.ToString().ToLower()}")}:{orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First()) + 1].Id}"),
                                },
                                new[]
                                {
@@ -494,13 +538,14 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
                                }
                            });
                 }
-
+                
                 await Client.EditMessageTextAsync(
                         chatId: chatId,
                         messageId: messageId,
                         text: $"Заказ № {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}\n" +
-                              $"Создан {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].CreatedAt}\n" +
-                              $"Объёмом: {volumeTotal} m3\n" +
+                              $"Пользователь: {userName}\n" +
+                              $"Создан {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].CreatedAt.AddHours(3)}\n" +
+                              $"Объёмом: {volumeTotal} м3\n" +
                               $"{orderStatusMessage}",
                         replyMarkup: replyMarkup,
                         cancellationToken: cancellationToken
@@ -512,14 +557,18 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
             {
                 var volumeTotal = await new CommonChecks(_workerCreds).GetVolume(orders[0].CustomerId, orders[0].Id);
 
+                var customerId = orders[0].CustomerId;
+                var userName = _dbContext.Customers.Where(x => x.TelegramID == customerId).First().Name;
+
                 if (orders.Count == 1)
                 {
                     await Client.EditMessageTextAsync(
                         chatId: chatId,
                         messageId: messageId,
                         text: $"Заказ № {orders[0].Id}\n" +
-                        $"Создан {orders[0].CreatedAt}\n" +
-                        $"Объёмом: {volumeTotal} m3\n" +
+                        $"Пользователь: {userName}\n" +
+                        $"Создан {orders[0].CreatedAt.AddHours(3)}\n" +
+                        $"Объёмом: {volumeTotal} м3\n" +
                         $"{orderStatusMessage}",
                         replyMarkup: new InlineKeyboardMarkup(
                             new[]
@@ -546,15 +595,16 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
                     }
                     else
                     {
-                        rightButton = InlineKeyboardButton.WithCallbackData(">", $"/order_manage:all:{orders[1].Id}");
+                        rightButton = InlineKeyboardButton.WithCallbackData(">", $"/order_manage:{(verified == null ? "all" : $"{verified.ToString().ToLower()}")}:{orders[1].Id}");
                     }
 
                     await Client.EditMessageTextAsync(
                         chatId: chatId,
                         messageId: messageId,
                         text: $"Заказ № {orders[0].Id}\n" +
-                        $"Создан {orders[0].CreatedAt}\n" +
-                        $"Объёмом: {volumeTotal} m3\n" +
+                        $"Пользователь: {userName}\n" +
+                        $"Создан {orders[0].CreatedAt.AddHours(3)}\n" +
+                        $"Объёмом: {volumeTotal} м3\n" +
                         $"{orderStatusMessage}",
                         replyMarkup: new InlineKeyboardMarkup(
                            new[]
@@ -582,6 +632,9 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
             else if (orders != null && orderId != null && verified == true)
             {
                 var volumeTotal = await new CommonChecks(_workerCreds).GetVolume(orders.Where(x => x.Id == orderId).Select(x => x.CustomerId).First(), (int)orderId);
+
+                var customerId = orders.Where(x => x.Id == orderId).First().CustomerId;
+                var userName = _dbContext.Customers.Where(x => x.TelegramID == customerId).First().Name;
 
                 InlineKeyboardMarkup replyMarkup = null;
 
@@ -651,8 +704,9 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
                         chatId: chatId,
                         messageId: messageId,
                         text: $"Заказ № {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].Id}\n" +
-                              $"Создан {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].CreatedAt}\n" +
-                              $"Объёмом: {volumeTotal} m3\n" +
+                              $"Пользователь: {userName}\n" +
+                              $"Создан {orders[orders.IndexOf(orders.Where(x => x.Id == orderId).First())].CreatedAt.AddHours(3)}\n" +
+                              $"Объёмом: {volumeTotal} м3\n" +
                               $"{orderStatusMessage}",
                         replyMarkup: replyMarkup,
                         cancellationToken: cancellationToken
@@ -661,7 +715,7 @@ public class OrderManageCommand(IWorkerCreds workerCreds) : ICommand
         }
         catch (Exception ex)
         {
-            TelegramWorker.Logger.LogWarning($"{ex.Message}");
+            TelegramWorker.Logger.LogWarning($"Ошибка в SendTemplateAsync\n{ex.Message}");
         }
     }
 }

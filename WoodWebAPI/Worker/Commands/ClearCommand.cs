@@ -3,7 +3,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
-namespace WoodWebAPI.Worker.Controller.Commands
+namespace WoodWebAPI.Worker.Commands
 {
     public class ClearCommand : ICommand
     {
@@ -38,7 +38,7 @@ namespace WoodWebAPI.Worker.Controller.Commands
                         {
                             var currentMessage = update.CallbackQuery.Message.MessageId;
                             for (int i = 0; i < 1001; i++)
-                            { 
+                            {
                                 await Client.DeleteMessageAsync(
                                     chatId: chatId,
                                     messageId: currentMessage - i);

@@ -1,64 +1,45 @@
-﻿using Telegram.Bot;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Runtime.InteropServices;
+using Telegram.Bot;
 using Telegram.Bot.Types;
+using WoodWebAPI.Data;
 using WoodWebAPI.Data.Entities;
 
 namespace WoodWebAPI.Worker;
 
 public class TelegramWorker : BackgroundService
 {
-    //private readonly ILogger<TelegramWorker> _logger;
-
-    //private readonly IWorkerCreds _telegtamWorkerCreds;
-
-    //public static TelegramBotClient? API { get; private set; }
-
-    //public static List<IsAdmin> AdminList = new();
-
-
-    //public TelegramWorker(ILogger<TelegramWorker> logger, IWorkerCreds workerCreds)
-    //{
-    //    _logger = logger;
-    //    Logger = _logger;
-    //    BaseUrl = workerCreds.BaseURL;
-    //    AdminList.Add(new IsAdmin()
-    //    {
-    //        AdminRole = 1,
-    //        CreatedAt = new DateTime(1997, 04, 10, 10, 51, 54),
-    //        Id = 0,
-    //        TelegramUsername = workerCreds.MainAdmin,
-    //        TelegramId = workerCreds.TelegramId,
-    //    });
-    //    PriceForM3 = workerCreds.PriceForM3;
-    //    PaymentToken = workerCreds.PaymentToken;
-    //    MinPrice = workerCreds.MinPrice;
-    //    _telegtamWorkerCreds = workerCreds;
-
-    //    //initialisation of telegram bot api
-    //    var botToken = _telegtamWorkerCreds.TelegramToken;
-    //    API = new TelegramBotClient(botToken);
-    //}
-
     private readonly ILogger<TelegramWorker> _logger;
+
+    private readonly WoodDBContext _db;
 
     private readonly IWorkerCreds _telegtamWorkerCreds;
 
-    public readonly static List<IsAdmin> AdminList = [];
-
     public static ILogger Logger { get; private set; }
     public static TelegramBotClient? API { get; private set; }
-    public TelegramWorker(ILogger<TelegramWorker> logger, IWorkerCreds workerCreds)
+
+    public TelegramWorker(WoodDBContext context, ILogger<TelegramWorker> logger, IWorkerCreds workerCreds)
     {
         _logger = logger;
         Logger = logger;
-        AdminList.Add(new IsAdmin()
+        _db = context;
+        var mainAdmin = new IsAdmin()
         {
             AdminRole = 1,
             CreatedAt = new DateTime(1997, 04, 10, 10, 51, 54),
             Id = 0,
             TelegramUsername = workerCreds.MainAdmin,
             TelegramId = workerCreds.TelegramId,
-        });
+        };
+        
+        if(!_db.IsAdmin.Any(x => x.TelegramUsername == mainAdmin.TelegramUsername && x.TelegramId == mainAdmin.TelegramId))
+        {
+            _db.IsAdmin.Add(mainAdmin);
+        }
+       
+        _db.SaveChanges();
         _telegtamWorkerCreds = workerCreds;
+
 
         //initialisation of telegram bot api
         var botToken = _telegtamWorkerCreds.TelegramToken;

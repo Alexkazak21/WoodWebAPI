@@ -6,7 +6,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using WoodWebAPI.Data.Models.OrderPosition;
 
-namespace WoodWebAPI.Worker.Controller.Commands
+namespace WoodWebAPI.Worker.Commands
 {
     public class AlterOrderPositionCommand(IWorkerCreds workerCreds) : ICommand
     {
@@ -222,13 +222,13 @@ namespace WoodWebAPI.Worker.Controller.Commands
                                                     cancellationToken: cancellationToken);
                     }
                 }
-                catch(ApiRequestException badException)
+                catch (ApiRequestException badException)
                 {
                     TelegramWorker.Logger.LogWarning($"Source: {badException.Source}\n" +
                         $"\tError code:{badException.ErrorCode}\n" +
                         $"\tMessage:\n\t{badException.Message}");
                 }
-                
+
             }
         }
 

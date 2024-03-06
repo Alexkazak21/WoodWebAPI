@@ -1,12 +1,11 @@
 ﻿using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Newtonsoft.Json;
 using WoodWebAPI.Data.Models.Customer;
 using WoodWebAPI.Auth;
 using Telegram.Bot.Types.ReplyMarkups;
 
-namespace WoodWebAPI.Worker.Controller.Commands
+namespace WoodWebAPI.Worker.Commands
 {
     public class SignUpCommand(IWorkerCreds workerCreds) : ICommand
     {
@@ -53,10 +52,20 @@ namespace WoodWebAPI.Worker.Controller.Commands
             };
 
             var contentCustomer = JsonContent.Create(customerDTO);
-            var contentRegCustomer = JsonContent.Create(regCustomerDTO);
-
             var resultCustomer = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Customer/CreateCustomers", contentCustomer, cancellationToken: cancellationToken);
-            var resultRegCustomer = await httpClient.PostAsJsonAsync($"{_workerCreds.BaseURL}/api/Authenticate/Register", contentRegCustomer, cancellationToken: cancellationToken);
+
+            var customerIsAmin = await CommonChecks.GetAdmin(_workerCreds);
+            HttpResponseMessage resultRegCustomer;
+            if (customerIsAmin.Any(x => x.TelegramId == chatId.ToString()))
+            {
+                var contentRegAdminCustomer = JsonContent.Create(regCustomerDTO);
+                resultRegCustomer = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Authenticate/RegisterAdmin", contentRegAdminCustomer, cancellationToken: cancellationToken);
+            }
+            else
+            {
+                var contentRegCustomer = JsonContent.Create(regCustomerDTO);
+                resultRegCustomer = await httpClient.PostAsync($"{_workerCreds.BaseURL}/api/Authenticate/Register", contentRegCustomer, cancellationToken: cancellationToken);
+            }
 
             if (resultCustomer.IsSuccessStatusCode && resultRegCustomer.IsSuccessStatusCode)
             {
