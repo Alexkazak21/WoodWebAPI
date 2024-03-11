@@ -1,5 +1,3 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System.Runtime.InteropServices;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using WoodWebAPI.Data;
