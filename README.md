@@ -93,7 +93,7 @@ Also it has it's own website [![Wood Cutters][https://woodcutters.mydurable.com/
 
 ### Built With
 
-* [![EfCore][EFcore]]
+* [![EFCore][EFcore]]
 * [![MSSQL][MSSQL]][MSSQL-url]
 * [![Telegram][Telegram]][Telegram-url]
 * [![NGROK][NGROK]][NGROK-url]
