@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
@@ -24,27 +24,38 @@ public class AdminManageCommand(IWorkerCreds workerCreds,WoodDBContext wood) : I
         {
             var chatId = 0l;
             var messageId = 0;
-            string[]? commandParts = null;
+            List<string>? commandParts = new();
 
             if (update.Type == Telegram.Bot.Types.Enums.UpdateType.CallbackQuery)
             {
                 chatId = update.CallbackQuery.From.Id;
                 messageId = update.CallbackQuery.Message.MessageId;
-                commandParts = update.CallbackQuery.Data.Split(":");
+                commandParts.AddRange(update.CallbackQuery.Data.Split(":"));
             }
 
-            if (commandParts != null && commandParts.Length > 1)
+            if (commandParts != null && commandParts.Count > 1)
             {
                 if (commandParts[1] == "add")
                 {
                     List<GetCustomerAdmin> availableToAddAdmins = new();
 
-                    if (commandParts.Length < 3)
+                    if (commandParts.Count <= 3)
                     {
                         availableToAddAdmins = await GetAvailableCustomers(true);
 
-                        if (availableToAddAdmins.Count == 1)
+                        if (availableToAddAdmins.Count > 0)
                         {
+                            long telegramId = 0L;
+                            if(commandParts.Count == 2)
+                            {
+                                commandParts.Add(availableToAddAdmins[0].TelegramId.ToString());
+                                telegramId = availableToAddAdmins[0].TelegramId;
+                            }
+                            else
+                            {
+                                telegramId = long.Parse(commandParts[2]);
+                            }
+
                             var replymarkup = new InlineKeyboardMarkup(
                                 new[]
                                 {
@@ -58,11 +69,70 @@ public class AdminManageCommand(IWorkerCreds workerCreds,WoodDBContext wood) : I
                                     }
                                 });
 
+                            if (availableToAddAdmins[0].TelegramId == telegramId && availableToAddAdmins.Count > 1)
+                            {
+                                replymarkup = new InlineKeyboardMarkup(
+                                new[]
+                                {
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData(">",$"/admin_manage:add:{availableToAddAdmins[1].TelegramId}")
+                                    },
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("Добавить",$"/change_role:{availableToAddAdmins[0].TelegramId}:Admin"),
+                                    },
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("Назад","/admin_manage"),
+                                    }
+                                });
+                            }
+                            else if (availableToAddAdmins[^1].TelegramId == telegramId && availableToAddAdmins.Count > 1)
+                            {
+                                replymarkup = new InlineKeyboardMarkup(
+                                new[]
+                                {
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("<",$"/admin_manage:add:{availableToAddAdmins[^2].TelegramId}")
+                                    },
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("Добавить",$"/change_role:{availableToAddAdmins[^1].TelegramId}:Admin"),
+                                    },
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("Назад","/admin_manage"),
+                                    }
+                                });
+                            }
+                            else if (availableToAddAdmins.Count > 1)
+                            {
+                                replymarkup = new InlineKeyboardMarkup(
+                                new[]
+                                {
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("<",$"/admin_manage:add:{availableToAddAdmins[availableToAddAdmins.FindIndex(x => x.TelegramId == telegramId) - 1].TelegramId}"),
+                                        InlineKeyboardButton.WithCallbackData(">",$"/admin_manage:add:{availableToAddAdmins[availableToAddAdmins.FindIndex(x => x.TelegramId == telegramId) + 1].TelegramId}")
+                                    },
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("Добавить",$"/change_role:{availableToAddAdmins[availableToAddAdmins.FindIndex(x => x.TelegramId == telegramId)].TelegramId}:Admin"),
+                                    },
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("Назад","/admin_manage"),
+                                    }
+                                });
+                            }
+
                             await Client.EditMessageTextAsync(
                                 chatId: chatId,
                                 messageId: messageId,
-                                text: $"Пользователь {availableToAddAdmins[0].TelegramId}" +
-                                $"\nС именем: {availableToAddAdmins[0].CustomerName}",
+                                text: $"Пользователь {availableToAddAdmins[availableToAddAdmins.FindIndex(x => x.TelegramId == telegramId)].TelegramId}" +
+                                $"\nС именем: {availableToAddAdmins[availableToAddAdmins.FindIndex(x => x.TelegramId == telegramId)].CustomerName}",
                                 replyMarkup: replymarkup,
                                 cancellationToken: cancellationToken);
                         }
@@ -80,21 +150,28 @@ public class AdminManageCommand(IWorkerCreds workerCreds,WoodDBContext wood) : I
                                 cancellationToken: cancellationToken);
                         }
                     }
-                    else if (commandParts[2] != null)
-                    {
-
-                    }
                 }
                 else if (commandParts[1] == "delete")
                 {
                     List<GetCustomerAdmin> availableToDeleteAdmins = new();
 
-                    if (commandParts.Length < 3)
+                    if (commandParts.Count <= 3)
                     {
                         availableToDeleteAdmins = await GetAvailableCustomers();
 
-                        if (availableToDeleteAdmins.Count == 1)
+                        if (availableToDeleteAdmins.Count > 0)
                         {
+                            long telegramId = 0L;
+                            if (commandParts.Count == 2)
+                            {
+                                commandParts.Add(availableToDeleteAdmins[0].TelegramId.ToString());
+                                telegramId = availableToDeleteAdmins[0].TelegramId;
+                            }
+                            else
+                            {
+                                telegramId = long.Parse(commandParts[2]);
+                            }
+
                             var replymarkup = new InlineKeyboardMarkup(
                                 new[]
                                 {
@@ -108,11 +185,69 @@ public class AdminManageCommand(IWorkerCreds workerCreds,WoodDBContext wood) : I
                                     }
                                 });
 
+                            if (availableToDeleteAdmins[0].TelegramId == telegramId && availableToDeleteAdmins.Count > 1)
+                            {
+                                replymarkup = new InlineKeyboardMarkup(
+                                new[]
+                                {
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData(">",$"/admin_manage:delete:{availableToDeleteAdmins[1].TelegramId}")
+                                    },
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("Удалить",$"/change_role:{availableToDeleteAdmins[0].TelegramId}:User"),
+                                    },
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("Назад","/admin_manage"),
+                                    }
+                                });
+                            }
+                            else if (availableToDeleteAdmins[^1].TelegramId == telegramId && availableToDeleteAdmins.Count > 1)
+                            {
+                                replymarkup = new InlineKeyboardMarkup(
+                                new[]
+                                {
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("<",$"/admin_manage:delete:{availableToDeleteAdmins[^2].TelegramId}")
+                                    },
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("Удалить",$"/change_role:{availableToDeleteAdmins[^1].TelegramId}:User"),
+                                    },
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("Назад","/admin_manage"),
+                                    }
+                                });
+                            }
+                            else if (availableToDeleteAdmins.Count > 1)
+                            {
+                                replymarkup = new InlineKeyboardMarkup(
+                                new[]
+                                {
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("<",$"/admin_manage:delete:{availableToDeleteAdmins[availableToDeleteAdmins.FindIndex(x => x.TelegramId == telegramId) - 1].TelegramId}"),
+                                        InlineKeyboardButton.WithCallbackData(">",$"/admin_manage:delete:{availableToDeleteAdmins[availableToDeleteAdmins.FindIndex(x => x.TelegramId == telegramId) + 1].TelegramId}")
+                                    },
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("Удалить",$"/change_role:{availableToDeleteAdmins[availableToDeleteAdmins.FindIndex(x => x.TelegramId == telegramId)].TelegramId}:User"),
+                                    },
+                                    new[]
+                                    {
+                                        InlineKeyboardButton.WithCallbackData("Назад","/admin_manage"),
+                                    }
+                                });
+                            }
                             await Client.EditMessageTextAsync(
                                 chatId: chatId,
                                 messageId: messageId,
-                                text: $"Администратор {availableToDeleteAdmins[0].TelegramId}" +
-                                $"\nС именем: {availableToDeleteAdmins[0].CustomerName}",
+                                text: $"Администратор {availableToDeleteAdmins[availableToDeleteAdmins.FindIndex(x => x.TelegramId == telegramId)].TelegramId}" +
+                                $"\nС именем: {availableToDeleteAdmins[availableToDeleteAdmins.FindIndex(x => x.TelegramId == telegramId)].CustomerName}",
                                 replyMarkup: replymarkup,
                                 cancellationToken: cancellationToken);
                         }
@@ -134,10 +269,6 @@ public class AdminManageCommand(IWorkerCreds workerCreds,WoodDBContext wood) : I
                                 replyMarkup: replymarkup,
                                 cancellationToken: cancellationToken);
                         }
-                    }
-                    else if (commandParts[2] != null)
-                    {
-
                     }
                 }
                 else
