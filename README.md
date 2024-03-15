@@ -219,7 +219,7 @@ Project Link: [https://github.com/Alexkazak21/WoodWebAPI](https://github.com/Ale
 [issues-shield]: https://img.shields.io/github/issues/Alexkazak21/WoodWebAPI.svg?style=for-the-badge
 [issues-url]: https://github.com/Alexkazak21/WoodWebAPI/issues
 [license-shield]:https://img.shields.io/badge/Licence-%20MIT-lightgrey?style=for-the-badge
-[license-url]: https://github.com/Alexkazak21/WoodWebAPI/blob/main/LICENSE.txt
+[license-url]: https://github.com/Alexkazak21/WoodWebAPI/blob/main/LICENSE
 [linkedin-shield]: https://img.shields.io/badge/LinkedIn-blue?style=for-the-badge
 [linkedin-url]: https://www.linkedin.com/in/%D0%B0%D0%BB%D0%B5%D0%BA%D1%81%D0%B0%D0%BD%D0%B4%D1%80-%D0%BA%D0%B0%D0%B7%D0%B0%D0%BA%D0%B5%D0%B2%D0%B8%D1%87-5a5b88212/
 [product-screenshot]: images/screenshot.PNG
