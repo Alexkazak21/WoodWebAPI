@@ -80,12 +80,12 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![WoodWebAPI][product-screenshot]](https://woodcutters.mydurable.com/)
+![telegram_intro][product-screenshot]
 
 This project was created for full support of the life cycle of a wood sawing order based on ГОСТ 18288-87.
 The main user interaction interface is TelegramBot.
 
-Also it has it's own website [![Wood Cutters][https://woodcutters.mydurable.com/]](https://woodcutters.mydurable.com/)
+Also it has it's own website where you can learn more about us at [Wood Cutters](https://woodcutters.mydurable.com/)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -93,7 +93,7 @@ Also it has it's own website [![Wood Cutters][https://woodcutters.mydurable.com/
 
 ### Built With
 
-* [![EFCore][EFcore]]
+* [![dotnetcore][Netcore]](https://dotnet.microsoft.com/en-us/download)
 * [![MSSQL][MSSQL]][MSSQL-url]
 * [![Telegram][Telegram]][Telegram-url]
 * [![NGROK][NGROK]][NGROK-url]
@@ -116,13 +116,13 @@ To get a local copy up and running follow these simple example steps.
 
 This is an example of how to list things you need to use the software and how to install them.
 * ngrok
-  Create an account at [https://ngrok.com](https://ngrok.com)
+  * Create an account at [https://ngrok.com](https://ngrok.com)
   
 * MSSQL
-	Make sure you have an access to MSSQL server
+	 * Make sure you have an access to MSSQL server
 
 * Telegram Bot
-	Create new Telegram Bot and provide your Telegram Token to `appsettings.json` or `appsettings.Development.json`
+	* Create new Telegram Bot and provide your Telegram Token to `appsettings.json` or `appsettings.Development.json`
 ### Installation
 
 1. Get a free API Key at [https://ngrok.com](https://ngrok.com)
@@ -142,9 +142,34 @@ This is an example of how to list things you need to use the software and how to
 	}
    ```
 6. Fill all empty params in `appsettings.json` or `appsettings.Development.json`
-[![config][config-screenshot]]   
-7. Apply migrations through Project Manager or CLI
-	```sh
+```json
+// all other nessecary params
+
+"ConnectionStrings": {
+  "ConnStrJWT": "",
+  "ConnStrWood": ""
+},
+"TelegramToken": "",
+"JWT": {
+  "ValidAudience": "http://localhost:4200",
+  "ValidIssuer": "http://localhost:5000",
+  "Secret": ""
+},
+"ngrok": {
+  "URL": ""
+},
+"admin": {
+  "Username": "test", //contact me
+  "TelegramId": "156231585" //contact me
+},
+"price": "35",
+"minPrice": "3.26",
+"paymentToken": "1877036958:TEST:9fc3faf99d85badc3fe214ba438e64609cd8454d", // change for real to start reciving payments
+"PaymentsLogFile": "payments.log"
+```
+
+7. Apply migrations through Package Manager Consoler or CLI
+   ```sh
    update-database -context applicationdbcontext
    ```
    ```sh
@@ -153,6 +178,7 @@ This is an example of how to list things you need to use the software and how to
 8. Start an app. 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+9. ( To use admin privileges contact ME and i'll let you know how to do this!) )
 <!-- CONTRIBUTING -->
 ## Contributing
 
@@ -183,7 +209,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Your Name - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
+Your Name - [@Alex_kazak999](https://twitter.com/twitter_handle) - email@email_client.com
 
 Project Link: [https://github.com/Alexkazak21/WoodWebAPI](https://github.com/Alexkazak21/WoodWebAPI)
 
@@ -202,11 +228,11 @@ Project Link: [https://github.com/Alexkazak21/WoodWebAPI](https://github.com/Ale
 [issues-shield]: https://img.shields.io/github/issues/Alexkazak21/WoodWebAPI.svg?style=for-the-badge
 [issues-url]: https://github.com/Alexkazak21/WoodWebAPI/issues
 [license-shield]: https://img.shields.io/github/license/Alexkazak21/WoodWebAPI.svg?style=for-the-badge
-[license-url]: https://github.com/Alexkazak21/WoodWebAPI/blob/master/LICENSE.txt
+[license-url]: https://github.com/Alexkazak21/WoodWebAPI/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/%D0%B0%D0%BB%D0%B5%D0%BA%D1%81%D0%B0%D0%BD%D0%B4%D1%80-%D0%BA%D0%B0%D0%B7%D0%B0%D0%BA%D0%B5%D0%B2%D0%B8%D1%87-5a5b88212/
-[product-screenshot]: images/screenshot.png
-[config-screenshot]: images/config-screenshot.png
+[product-screenshot]: images/screenshot.PNG
+[config-screenshot]: images/config-screenshot.PNG
 [Netcore]: https://img.shields.io/badge/.NetCore-68217A?style=for-the-badge&logo=dotnet
 [MSSQL]: https://img.shields.io/badge/MSSQL-CC2927?style=for-the-badge&logo=microsoftsqlserver
 [MSSQL-url]: https://www.microsoft.com/ru-ru/sql-server/sql-server-downloads
