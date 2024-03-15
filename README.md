@@ -35,19 +35,6 @@
   </a>
 
 <h3 align="center">WoodWebAPI</h3>
-
-  <p align="center">
-    project_description
-    <br />
-    <a href="https://github.com/Alexkazak21/WoodWebAPI"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/Alexkazak21/WoodWebAPI">View Demo</a>
-    ·
-    <a href="https://github.com/Alexkazak21/WoodWebAPI/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/Alexkazak21/WoodWebAPI/issues">Request Feature</a>
-  </p>
 </div>
 
 
@@ -146,17 +133,17 @@ This is an example of how to list things you need to use the software and how to
 // all other nessecary params
 
 "ConnectionStrings": {
-  "ConnStrJWT": "",
-  "ConnStrWood": ""
+  "ConnStrJWT": "", //fill me
+  "ConnStrWood": ""  //fill me
 },
-"TelegramToken": "",
+"TelegramToken": "",  //fill me
 "JWT": {
   "ValidAudience": "http://localhost:4200",
   "ValidIssuer": "http://localhost:5000",
-  "Secret": ""
+  "Secret": ""  //fill me
 },
 "ngrok": {
-  "URL": ""
+  "URL": ""  //fill me
 },
 "admin": {
   "Username": "test", //contact me
@@ -209,7 +196,11 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Your Name - [@Alex_kazak999](https://twitter.com/twitter_handle) - email@email_client.com
+Alexander Kazakevich 
+
+[![@Alex_kazak999][Telegram_Me]][Telegram_Me_url]
+
+[![Gmail][gmail]](mailto:sashakazakevich10@gmail.com)
 
 Project Link: [https://github.com/Alexkazak21/WoodWebAPI](https://github.com/Alexkazak21/WoodWebAPI)
 
@@ -227,9 +218,9 @@ Project Link: [https://github.com/Alexkazak21/WoodWebAPI](https://github.com/Ale
 [stars-url]: https://github.com/Alexkazak21/WoodWebAPI/stargazers
 [issues-shield]: https://img.shields.io/github/issues/Alexkazak21/WoodWebAPI.svg?style=for-the-badge
 [issues-url]: https://github.com/Alexkazak21/WoodWebAPI/issues
-[license-shield]: https://img.shields.io/github/license/Alexkazak21/WoodWebAPI.svg?style=for-the-badge
-[license-url]: https://github.com/Alexkazak21/WoodWebAPI/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
+[license-shield]:https://img.shields.io/badge/Licence-%20MIT-lightgrey?style=for-the-badge
+[license-url]: https://github.com/Alexkazak21/WoodWebAPI/blob/main/LICENSE.txt
+[linkedin-shield]: https://img.shields.io/badge/LinkedIn-blue?style=for-the-badge
 [linkedin-url]: https://www.linkedin.com/in/%D0%B0%D0%BB%D0%B5%D0%BA%D1%81%D0%B0%D0%BD%D0%B4%D1%80-%D0%BA%D0%B0%D0%B7%D0%B0%D0%BA%D0%B5%D0%B2%D0%B8%D1%87-5a5b88212/
 [product-screenshot]: images/screenshot.PNG
 [config-screenshot]: images/config-screenshot.PNG
@@ -238,6 +229,10 @@ Project Link: [https://github.com/Alexkazak21/WoodWebAPI](https://github.com/Ale
 [MSSQL-url]: https://www.microsoft.com/ru-ru/sql-server/sql-server-downloads
 [Telegram]: https://img.shields.io/badge/Telegram-26A5E4?style=for-the-badge&logo=telegram
 [Telegram-url]: https://telegram.org/
+[Telegram_Me]: https://img.shields.io/badge/telegtam-26A5E4?style=for-the-badge&logo=telegram
+[Telegram_Me_url]: https://t.me/Alex_kazak999
+[Gmail]: https://img.shields.io/badge/gmail-EA4335?style=for-the-badge&logo=gmail&logoColor=white
+[Gmail_url]: sashakazakevich10@gmail.com
 [NGROK]: https://img.shields.io/badge/ngrok-1F1E37?style=for-the-badge&logo=ngrok
 [NGROK-url]: https://ngrok.com/
 [Svelte.dev]: https://img.shields.io/badge/Svelte-4A4A55?style=for-the-badge&logo=svelte&logoColor=FF3E00
